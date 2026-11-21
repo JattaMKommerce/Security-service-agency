@@ -31,7 +31,9 @@ $title = 'Install Guard Duty App';
 <main class="install-wrap">
     <!-- Top Hero Banner -->
     <div class="text-center mb-4">
-        <div class="g-logo"><i class="bi bi-phone-fill"></i></div>
+        <div class="mb-3">
+            <img src="<?= asset('img/guards/hero-guard-sunglasses.jpg') ?>" alt="Officer" style="width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #f5b301; box-shadow: 0 8px 24px rgba(0,0,0,.15); display: inline-block;">
+        </div>
         <h1 class="h4 fw-bold mb-1"><?= e(company_name()) ?></h1>
         <p class="text-muted small">Guard & Bodyguard Duty Mobile App Installation</p>
         <div class="d-flex justify-content-center gap-2 flex-wrap">

@@ -73,3 +73,4 @@ cp app-release-signed.apk /path/to/security-agency/downloads/guard-duty-app.apk
 2. Tap the **Share icon** (`⎋` box with arrow pointing up).
 3. Scroll down and tap **"Add to Home Screen"** (`➕`).
 4. Tap **"Add"** in the top right.
+

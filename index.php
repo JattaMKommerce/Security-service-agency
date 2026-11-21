@@ -770,8 +770,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
 
         <div class="hero-visual">
             <div class="hero-photo-wrap">
-                <!-- Authentic, well-trained uniformed security officer -->
-                <img src="<?= asset('img/guards/hero-security-officer.jpg') ?>" alt="Well-trained uniformed security officer standing watch">
+                <!-- Commanding uniformed security officer with walkie-talkie on site -->
+                <img src="<?= asset('img/guards/hero-guard-sunglasses.jpg') ?>" alt="Commanding uniformed security officer on active watch">
             </div>
             <div class="floating-safety-card">
                 <div class="floating-safety-icon">
@@ -851,8 +851,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <div class="service-card">
                 <div class="service-img-wrap">
                     <span class="service-badge"><i class="bi bi-building-lock me-1"></i> 24/7 Gatekeeping</span>
-                    <!-- Professional building security guard standing on duty -->
-                    <img src="<?= asset('img/guards/building-security-guard.jpg') ?>" alt="Trained building security officer on duty">
+                    <!-- Professional female security officer on duty with radio -->
+                    <img src="<?= asset('img/guards/guard-female-radio.jpg') ?>" alt="Trained security officer on duty with radio communication">
                 </div>
                 <div class="service-body">
                     <h3 class="service-title">Building & Facility</h3>
@@ -864,18 +864,18 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                 </div>
             </div>
 
-            <!-- 3. Event Security -->
+            <!-- 3. Event Security & Access Screening -->
             <div class="service-card">
                 <div class="service-img-wrap">
-                    <span class="service-badge"><i class="bi bi-people-fill me-1"></i> Crowd Control</span>
-                    <!-- Security officers on patrol -->
-                    <img src="<?= asset('img/guards/event-security-patrol.jpg') ?>" alt="Security patrol officers on active duty">
+                    <span class="service-badge"><i class="bi bi-shield-check me-1"></i> Entry Screening</span>
+                    <!-- Security officer conducting metal detector screening -->
+                    <img src="<?= asset('img/guards/guard-scanner-screening.jpg') ?>" alt="Security officer conducting handheld metal detector screening">
                 </div>
                 <div class="service-body">
-                    <h3 class="service-title">Event & Bouncers</h3>
-                    <p class="service-text">Robust crowd management and entry screening for high-profile galas, weddings, private celebrations, and conferences with calm authority.</p>
+                    <h3 class="service-title">Event & Screening</h3>
+                    <p class="service-text">Robust entry screening with metal detectors, bag checks, and crowd control for galas, weddings, private exhibitions, and corporate venues.</p>
                     <div class="service-footer">
-                        <span>Events & Galas</span>
+                        <span>Events & Screening</span>
                         <i class="bi bi-arrow-right"></i>
                     </div>
                 </div>
