@@ -13,11 +13,12 @@ if (is_post()) {
     require_csrf();
     $action = $_POST['action'] ?? '';
     if ($action === 'reset_password') {
-        $pw = substr(str_replace(['+', '/', '='], '', base64_encode(random_bytes(9))), 0, 8);
+        $customPw = trim((string)post_str('new_password', 50));
+        $pw = $customPw !== '' ? $customPw : '123456';
         q('UPDATE guards SET password_hash = ?, remember_hash = NULL, remember_expires = NULL WHERE id = ?', [password_hash($pw, PASSWORD_DEFAULT), $id]);
         clear_guard_login_lock($id);
-        log_activity('guard.reset_password', $g['employee_code']);
-        flash('success', 'New app password for ' . $g['full_name'] . ': ' . $pw . ' — share it with the guard. It will not be shown again.');
+        log_activity('guard.reset_password', $g['employee_code'] . ' -> ' . $pw);
+        flash('success', 'Guard App password for ' . $g['full_name'] . ' set to: ' . $pw . ' — guard can now sign in with this PIN.');
     } elseif ($action === 'toggle_armed') {
         $newArmed = $g['is_armed'] ? 0 : 1;
         q('UPDATE guards SET is_armed = ? WHERE id = ?', [$newArmed, $id]);
@@ -68,9 +69,10 @@ require APP_ROOT . '/includes/layout/header.php';
                 <button class="btn btn-outline-success btn-sm" title="Click to authorize firearm"><i class="bi bi-toggle-off text-muted"></i> Gun: Disabled (Enable)</button>
             <?php endif; ?>
         </form>
-        <form method="post" class="d-inline" data-confirm="Generate a new app password for this guard?">
+        <form method="post" class="d-inline" onsubmit="var p = prompt('Enter new password for <?= e($g['full_name']) ?> (or click OK for 123456):', '123456'); if (p === null) return false; this.new_password.value = p; return true;">
             <?= csrf_field() ?><input type="hidden" name="action" value="reset_password">
-            <button class="btn btn-outline-secondary btn-sm"><i class="bi bi-key"></i> Reset app password</button>
+            <input type="hidden" name="new_password" value="">
+            <button class="btn btn-outline-secondary btn-sm"><i class="bi bi-key"></i> Set / Reset PIN</button>
         </form>
     </div>
 </div>
@@ -129,6 +131,10 @@ require APP_ROOT . '/includes/layout/header.php';
                         <span class="text-muted">Phone Login:</span>
                         <span class="fw-bold"><code><?= e($g['phone']) ?></code></span>
                     </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Duty PIN / Pass:</span>
+                        <span class="fw-bold text-success"><code>123456</code> (or your custom PIN)</span>
+                    </div>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Duty App:</span>
                         <a href="<?= url('guard/login.php?code=' . urlencode($g['employee_code'])) ?>" target="_blank" class="fw-semibold text-truncate" style="max-width: 170px;">
@@ -148,7 +154,7 @@ require APP_ROOT . '/includes/layout/header.php';
                     . "(Open link in Chrome or Safari, then tap 'Install App' / 'Add to Home Screen')\n\n"
                     . "🔑 *Step 2: Sign In:*\n"
                     . "Login ID: *" . $g['employee_code'] . "* (or your phone " . $g['phone'] . ")\n"
-                    . "Password: Ask your supervisor or use your assigned PIN.\n\n"
+                    . "Password / PIN: *123456* (or your assigned PIN)\n\n"
                     . "📍 *Step 3:* Tap 'Start Duty' when on site to begin shift tracking.";
                 $waLink = "https://wa.me/" . $cleanPhone . "?text=" . rawurlencode($waMsg);
                 ?>

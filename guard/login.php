@@ -50,9 +50,10 @@ $title = 'Guard Login';
     <form method="post">
         <?= csrf_field() ?>
         <label class="form-label">Employee Code or Phone Number</label>
-        <input name="login" class="form-control form-control-lg mb-3" value="<?= e($login) ?>" autocomplete="username" autocapitalize="characters" placeholder="e.g. SEC-001 or 9876543210" required autofocus>
+        <input name="login" class="form-control form-control-lg mb-3" value="<?= e($login) ?>" autocomplete="username" autocapitalize="characters" placeholder="e.g. GRD-0002 or 8310979654" required autofocus>
         <label class="form-label">Password / PIN</label>
-        <input type="password" name="password" class="form-control form-control-lg mb-4" autocomplete="current-password" placeholder="Enter password" required>
+        <input type="password" name="password" class="form-control form-control-lg mb-2" autocomplete="current-password" placeholder="Enter password (e.g. 123456)" required>
+        <div class="small text-warning opacity-75 mb-4"><i class="bi bi-info-circle me-1"></i>Default guard PIN is <strong>123456</strong></div>
         <button class="btn btn-warning btn-lg w-100 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Duty</button>
     </form>
 
