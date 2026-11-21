@@ -1,0 +1,64 @@
+/* Guard mobile app */
+:root {
+    --navy: #0b1324; --navy-2: #16213b; --gold: #f5b301; --line: #e5e9f0; --muted: #64748b;
+    --bs-body-font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+html, body { -webkit-tap-highlight-color: transparent; }
+.min-w-0 { min-width: 0; }
+
+/* Auth */
+.g-auth { min-height: 100vh; background: radial-gradient(800px 500px at 0% 0%, #1e3a8a 0%, transparent 60%), var(--navy); color: #fff; display: grid; place-items: center; padding: 1.25rem; }
+.g-auth-card { width: 100%; max-width: 400px; }
+.g-auth .form-label { color: #cbd5e1; font-weight: 600; font-size: .85rem; }
+.g-auth .form-control { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); color: #fff; border-radius: 12px; }
+.g-auth .form-control:focus { background: rgba(255,255,255,.1); color: #fff; border-color: var(--gold); box-shadow: 0 0 0 .2rem rgba(245,179,1,.2); }
+.g-logo { width: 72px; height: 72px; border-radius: 20px; margin: 0 auto 1rem; display: grid; place-items: center; font-size: 2.2rem; color: var(--navy); background: linear-gradient(135deg, var(--gold), #f59e0b); box-shadow: 0 10px 30px rgba(245,179,1,.3); }
+
+/* App shell */
+.g-body { background: #eef1f7; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+.g-top { position: sticky; top: 0; z-index: 1000; display: flex; align-items: center; gap: .75rem; padding: calc(.75rem + env(safe-area-inset-top)) 1rem .75rem; background: linear-gradient(135deg, var(--navy), var(--navy-2)); color: #fff; box-shadow: 0 4px 16px rgba(2,6,23,.2); }
+.g-main { max-width: 560px; margin: 0 auto; padding: 1rem; }
+.g-card { background: #fff; border-radius: 18px; padding: 1.1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(15,23,42,.06), 0 6px 20px rgba(15,23,42,.05); }
+.g-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin-bottom: .5rem; }
+.g-hired { display: inline-flex; align-items: center; gap: .4rem; background: #eef2ff; color: #3730a3; padding: .35rem .75rem; border-radius: 999px; font-size: .85rem; }
+.g-kv > div { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem 0; border-bottom: 1px dashed var(--line); font-size: .88rem; }
+.g-kv > div:last-child { border-bottom: 0; }
+.g-kv span { color: var(--muted); }
+.g-note { background: #fffbeb; color: #92400e; border-radius: 10px; padding: .5rem .75rem; font-size: .85rem; }
+.g-row { display: flex; justify-content: space-between; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--line); }
+.g-row:last-child { border-bottom: 0; }
+
+.avatar { border-radius: 50%; object-fit: cover; display: inline-grid; place-items: center; flex-shrink: 0; }
+.avatar-md { width: 42px; height: 42px; font-size: .9rem; }
+.avatar-initials { background: linear-gradient(135deg, var(--gold), #f59e0b); color: var(--navy); font-weight: 800; }
+
+/* Duty */
+.g-duty-state { font-weight: 800; letter-spacing: .12em; font-size: .9rem; display: inline-block; padding: .35rem 1rem; border-radius: 999px; margin-bottom: .5rem; }
+.g-duty-state.off { background: #f1f5f9; color: #475569; }
+.g-duty-state.on { background: #dcfce7; color: #166534; }
+.g-timer { font-size: 2.6rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: #0f172a; }
+.g-duty-btn { border-radius: 16px; font-weight: 800; padding: 1rem; font-size: 1.15rem; color: #fff; border: 0; }
+.g-duty-btn.start { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 8px 20px rgba(22,163,74,.35); }
+.g-duty-btn.stop { background: linear-gradient(135deg, #475569, #1e293b); }
+.g-duty-btn:disabled { opacity: .6; color: #fff; }
+.g-track { display: flex; align-items: center; justify-content: center; gap: .5rem; color: #166534; font-weight: 600; }
+.g-pulse { width: 10px; height: 10px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 0 rgba(22,163,74,.6); animation: gp 1.6s infinite; }
+@keyframes gp { 70% { box-shadow: 0 0 0 10px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+
+/* SOS */
+.g-sos-btn { position: relative; width: 150px; height: 150px; border-radius: 50%; border: 0; margin: .5rem auto 0; display: grid; place-items: center;
+    background: radial-gradient(circle at 35% 30%, #f87171, #dc2626 55%, #991b1b); color: #fff; font-size: 2.2rem; font-weight: 900; letter-spacing: .1em;
+    box-shadow: 0 12px 30px rgba(220,38,38,.45), inset 0 -6px 12px rgba(0,0,0,.2); user-select: none; -webkit-user-select: none; touch-action: none; }
+.g-sos-btn:active { transform: scale(.97); }
+.g-sos-btn span { position: relative; z-index: 2; }
+.g-sos-ring { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); transform: rotate(-90deg); }
+.g-sos-ring circle { fill: none; stroke: #fde68a; stroke-width: 6; stroke-linecap: round; }
+.g-sos-active { background: linear-gradient(135deg, #b91c1c, #dc2626); color: #fff; animation: sosA 1.2s infinite; }
+@keyframes sosA { 50% { box-shadow: 0 0 0 8px rgba(220,38,38,.25); } }
+
+/* Banners & toast */
+.g-banner { border-radius: 12px; padding: .65rem .85rem; margin-bottom: 1rem; font-size: .85rem; font-weight: 600; display: flex; gap: .5rem; align-items: flex-start; }
+.g-banner-warn { background: #fef3c7; color: #92400e; }
+.g-banner-danger { background: #fee2e2; color: #991b1b; }
+.g-toast { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate(-50%, 150%); background: #0f172a; color: #fff; padding: .8rem 1.1rem; border-radius: 14px; font-size: .9rem; font-weight: 600; max-width: calc(100vw - 2rem); box-shadow: 0 10px 30px rgba(0,0,0,.3); transition: transform .25s ease; z-index: 3000; text-align: center; }
+.g-toast.show { transform: translate(-50%, 0); }

@@ -1,0 +1,152 @@
+<?php
+require dirname(__DIR__) . '/includes/bootstrap.php';
+$admin = require_admin();
+
+if (is_post()) {
+    require_csrf();
+    $aid = (int)post_int('id', 0);
+    $action = $_POST['action'] ?? '';
+    $al = q_one('SELECT * FROM alerts WHERE id = ?', [$aid]);
+    if ($al && $action === 'acknowledge' && $al['status'] === 'open') {
+        q("UPDATE alerts SET status = 'acknowledged', acknowledged_by = ?, acknowledged_at = ? WHERE id = ?", [$admin['id'], now(), $aid]);
+        log_activity('alert.acknowledge', "#$aid {$al['type']}");
+        flash('success', 'Alert acknowledged. The guard sees that help is on the way.');
+    } elseif ($al && $action === 'resolve' && $al['status'] !== 'resolved') {
+        $note = post_str('note', 255) ?? 'Resolved';
+        q("UPDATE alerts SET status = 'resolved', resolved_by = ?, resolved_at = ?, resolution_note = ?,
+                  acknowledged_by = COALESCE(acknowledged_by, ?), acknowledged_at = COALESCE(acknowledged_at, ?) WHERE id = ?",
+          [$admin['id'], now(), $note, $admin['id'], now(), $aid]);
+        log_activity('alert.resolve', "#$aid {$al['type']}: $note");
+        flash('success', 'Alert resolved.');
+    }
+    redirect('admin/alerts.php?id=' . $aid);
+}
+
+$detail = null;
+if (($id = get_int('id')) > 0) {
+    $detail = q_one('SELECT al.*, g.full_name, g.employee_code, g.phone, g.photo, g.last_lat, g.last_lng, g.last_seen_at,
+                            g.emergency_contact_name, g.emergency_contact_phone,
+                            c.name AS client_name, c.phone AS client_phone, c.contact_person,
+                            a.site_name, a.site_lat, a.site_lng, a.geofence_radius_m,
+                            ak.name AS ack_name, rs.name AS res_name
+                       FROM alerts al JOIN guards g ON g.id = al.guard_id
+                       LEFT JOIN clients c ON c.id = al.client_id LEFT JOIN assignments a ON a.id = al.assignment_id
+                       LEFT JOIN admins ak ON ak.id = al.acknowledged_by LEFT JOIN admins rs ON rs.id = al.resolved_by
+                      WHERE al.id = ?', [$id]);
+}
+
+$status = get_str('status', 20) ?: 'unresolved';
+$type = get_str('type', 20);
+$where = ['1=1'];
+$params = [];
+if ($status === 'unresolved') $where[] = "al.status <> 'resolved'";
+elseif (in_array($status, ['open', 'acknowledged', 'resolved'], true)) { $where[] = 'al.status = ?'; $params[] = $status; }
+if (in_array($type, ['sos', 'geofence_exit'], true)) { $where[] = 'al.type = ?'; $params[] = $type; }
+$p = paginate('FROM alerts al JOIN guards g ON g.id = al.guard_id LEFT JOIN clients c ON c.id = al.client_id WHERE ' . implode(' AND ', $where),
+    $params, 'al.*, g.full_name, g.employee_code, c.name AS client_name', "(al.status = 'open') DESC, al.id DESC", 30);
+
+$pageTitle = 'Alerts';
+$activeNav = 'alerts';
+$useMap = (bool)$detail;
+require APP_ROOT . '/includes/layout/header.php';
+?>
+<?php if ($detail): $isSos = $detail['type'] === 'sos'; ?>
+<div class="card mb-3 border-<?= $isSos ? 'danger' : 'warning' ?>">
+    <div class="card-header d-flex align-items-center gap-2 <?= $isSos && $detail['status'] !== 'resolved' ? 'text-bg-danger' : '' ?>">
+        <i class="bi <?= $isSos ? 'bi-exclamation-octagon-fill' : 'bi-sign-turn-right-fill' ?>"></i>
+        <strong><?= $isSos ? 'SOS / Panic alert' : 'Guard left the duty site' ?> #<?= (int)$detail['id'] ?></strong>
+        <span class="ms-auto"><?= status_badge($detail['status']) ?></span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-5">
+                <a class="person mb-3" href="<?= url('admin/guard_view.php?id=' . $detail['guard_id']) ?>"><?= avatar($detail['full_name'], $detail['photo'], 'lg') ?>
+                    <span><span class="name d-block fs-6"><?= e($detail['full_name']) ?></span><span class="sub"><?= e($detail['employee_code']) ?></span></span></a>
+                <dl class="kv mb-3">
+                    <dt>Raised</dt><dd><?= e(fmt_datetime($detail['created_at'])) ?> (<?= e(time_ago($detail['created_at'])) ?>)</dd>
+                    <dt>Message</dt><dd><?= e($detail['message'] ?: '—') ?></dd>
+                    <dt>Hired by</dt><dd><?= e($detail['client_name'] ?? '—') ?><?= $detail['site_name'] ? ' · ' . e($detail['site_name']) : '' ?></dd>
+                    <?php if ($detail['distance_m'] !== null): ?><dt>Distance</dt><dd><?= (int)$detail['distance_m'] ?> m from site (allowed <?= (int)$detail['geofence_radius_m'] ?> m)</dd><?php endif; ?>
+                    <dt>Alert location</dt><dd><?= $detail['lat'] !== null ? e($detail['lat'] . ', ' . $detail['lng']) . ' · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' . e($detail['lat']) . '&mlon=' . e($detail['lng']) . '#map=18/' . e($detail['lat']) . '/' . e($detail['lng']) . '">open map</a>' : 'Not available' ?></dd>
+                    <dt>Live now</dt><dd><?= e(time_ago($detail['last_seen_at'])) ?></dd>
+                    <?php if ($detail['ack_name']): ?><dt>Acknowledged</dt><dd><?= e($detail['ack_name']) ?> · <?= e(fmt_datetime($detail['acknowledged_at'])) ?></dd><?php endif; ?>
+                    <?php if ($detail['status'] === 'resolved'): ?><dt>Resolved</dt><dd><?= e($detail['res_name'] ?? 'System') ?> · <?= e(fmt_datetime($detail['resolved_at'])) ?><div class="small text-muted"><?= e($detail['resolution_note']) ?></div></dd><?php endif; ?>
+                </dl>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a href="tel:<?= e($detail['phone']) ?>" class="btn btn-success btn-sm"><i class="bi bi-telephone"></i> Call guard</a>
+                    <?php if ($detail['client_phone']): ?><a href="tel:<?= e($detail['client_phone']) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-telephone"></i> Call client</a><?php endif; ?>
+                    <?php if ($detail['emergency_contact_phone']): ?><a href="tel:<?= e($detail['emergency_contact_phone']) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-telephone"></i> Emergency contact</a><?php endif; ?>
+                    <a href="<?= url('admin/tracking.php?guard_id=' . $detail['guard_id']) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-geo-alt"></i> Track live</a>
+                </div>
+                <?php if ($detail['status'] !== 'resolved'): ?>
+                    <?php if ($detail['status'] === 'open'): ?>
+                        <form method="post" class="mb-2"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$detail['id'] ?>"><input type="hidden" name="action" value="acknowledge">
+                            <button class="btn btn-warning w-100"><i class="bi bi-hand-thumbs-up"></i> Acknowledge — help is on the way</button></form>
+                    <?php endif; ?>
+                    <form method="post"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$detail['id'] ?>"><input type="hidden" name="action" value="resolve">
+                        <div class="input-group"><input name="note" class="form-control" placeholder="What happened / action taken" maxlength="255">
+                            <button class="btn btn-primary"><i class="bi bi-check2-circle"></i> Resolve</button></div></form>
+                <?php endif; ?>
+            </div>
+            <div class="col-lg-7"><div id="alertMap" class="map-box"></div></div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="page-actions">
+    <ul class="nav nav-tabs border-0">
+        <?php foreach (['unresolved' => 'Unresolved', 'resolved' => 'Resolved', 'all' => 'All'] as $k => $lbl): ?>
+            <li class="nav-item"><a class="nav-link<?= $status === $k ? ' active' : '' ?>" href="?status=<?= $k ?>&type=<?= e($type) ?>"><?= $lbl ?></a></li>
+        <?php endforeach; ?>
+    </ul>
+    <div class="btn-group btn-group-sm">
+        <a href="?status=<?= e($status) ?>" class="btn btn-outline-secondary<?= $type === '' ? ' active' : '' ?>">All types</a>
+        <a href="?status=<?= e($status) ?>&type=sos" class="btn btn-outline-danger<?= $type === 'sos' ? ' active' : '' ?>">SOS</a>
+        <a href="?status=<?= e($status) ?>&type=geofence_exit" class="btn btn-outline-warning<?= $type === 'geofence_exit' ? ' active' : '' ?>">Left site</a>
+    </div>
+</div>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead><tr><th>Type</th><th>Bodyguard</th><th>Client</th><th>Details</th><th>Raised</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            <?php if (!$p['rows']): ?><tr><td colspan="7"><div class="empty-state"><i class="bi bi-shield-check"></i>No alerts here</div></td></tr><?php endif; ?>
+            <?php foreach ($p['rows'] as $a): ?>
+                <tr class="<?= $a['status'] === 'open' && $a['type'] === 'sos' ? 'table-danger' : '' ?>">
+                    <td><?= status_badge($a['type']) ?></td>
+                    <td><a href="<?= url('admin/guard_view.php?id=' . $a['guard_id']) ?>" class="fw-semibold"><?= e($a['full_name']) ?></a><div class="small text-muted"><?= e($a['employee_code']) ?></div></td>
+                    <td class="small"><?= e($a['client_name'] ?? '—') ?></td>
+                    <td class="small"><?= e($a['message']) ?></td>
+                    <td class="small text-nowrap"><?= e(fmt_datetime($a['created_at'])) ?><div class="text-muted"><?= e(time_ago($a['created_at'])) ?></div></td>
+                    <td><?= status_badge($a['status']) ?></td>
+                    <td class="text-end"><a href="<?= url('admin/alerts.php?id=' . $a['id'] . '&status=' . urlencode($status)) ?>" class="btn btn-sm btn-light">Open</a></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer"><?= pagination_links($p) ?></div>
+</div>
+<?php
+if ($detail) {
+    $d = [
+        'alert' => $detail['lat'] !== null ? [(float)$detail['lat'], (float)$detail['lng']] : null,
+        'live'  => $detail['last_lat'] !== null ? [(float)$detail['last_lat'], (float)$detail['last_lng']] : null,
+        'site'  => $detail['site_lat'] !== null ? [(float)$detail['site_lat'], (float)$detail['site_lng'], (int)$detail['geofence_radius_m'], $detail['site_name']] : null,
+        'name'  => $detail['full_name'],
+        'sos'   => $detail['type'] === 'sos',
+    ];
+    $inlineScript = '<script>document.addEventListener("DOMContentLoaded", function () {
+        const D = ' . json_encode($d) . ';
+        const map = APP.map.create("alertMap");
+        const pts = [];
+        if (D.site) { L.marker([D.site[0], D.site[1]], { icon: APP.map.siteIcon() }).bindTooltip(APP.esc(D.site[3])).addTo(map);
+            L.circle([D.site[0], D.site[1]], { radius: D.site[2], color: "#1d4ed8", weight: 1.5, dashArray: "4 4", fillOpacity: .06 }).addTo(map); pts.push([D.site[0], D.site[1]]); }
+        if (D.alert) { L.marker(D.alert, { icon: APP.map.guardIcon(D.sos ? "sos" : "outside", D.name), zIndexOffset: 1000 }).bindPopup("Alert location").addTo(map); pts.push(D.alert); }
+        if (D.live) { L.circleMarker(D.live, { radius: 8, color: "#16a34a", fillColor: "#22c55e", fillOpacity: .9 }).bindTooltip("Current position").addTo(map); pts.push(D.live); }
+        if (pts.length) map.fitBounds(pts, { padding: [50, 50], maxZoom: 17 });
+    });</script>';
+}
+require APP_ROOT . '/includes/layout/footer.php';
