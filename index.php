@@ -770,8 +770,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
 
         <div class="hero-visual">
             <div class="hero-photo-wrap">
-                <!-- High-quality, well-trained uniformed security guard -->
-                <img src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1000&q=85" alt="Well-trained uniformed security officer standing watch">
+                <!-- Authentic, well-trained uniformed security officer -->
+                <img src="<?= asset('img/guards/hero-security-officer.jpg') ?>" alt="Well-trained uniformed security officer standing watch">
             </div>
             <div class="floating-safety-card">
                 <div class="floating-safety-icon">
@@ -834,8 +834,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <div class="service-card">
                 <div class="service-img-wrap">
                     <span class="service-badge"><i class="bi bi-person-fill-shield me-1"></i> Close Protection</span>
-                    <!-- VIP Bodyguard in suit -->
-                    <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=85" alt="Executive VIP Bodyguard in tailored dark suit">
+                    <!-- VIP Close Protection Bodyguards in dark suits -->
+                    <img src="<?= asset('img/guards/vip-bodyguard-team.jpg') ?>" alt="Close Protection VIP Bodyguards in suits">
                 </div>
                 <div class="service-body">
                     <h3 class="service-title">VIP Bodyguard</h3>
@@ -851,8 +851,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <div class="service-card">
                 <div class="service-img-wrap">
                     <span class="service-badge"><i class="bi bi-building-lock me-1"></i> 24/7 Gatekeeping</span>
-                    <!-- Professional building security guard standing at entrance -->
-                    <img src="https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=600&q=85" alt="Trained building security officer at entrance">
+                    <!-- Professional building security guard standing on duty -->
+                    <img src="<?= asset('img/guards/building-security-guard.jpg') ?>" alt="Trained building security officer on duty">
                 </div>
                 <div class="service-body">
                     <h3 class="service-title">Building & Facility</h3>
@@ -868,8 +868,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <div class="service-card">
                 <div class="service-img-wrap">
                     <span class="service-badge"><i class="bi bi-people-fill me-1"></i> Crowd Control</span>
-                    <!-- Tactical event security guard bouncers -->
-                    <img src="https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=600&q=85" alt="Trained event security bouncers team">
+                    <!-- Security officers on patrol -->
+                    <img src="<?= asset('img/guards/event-security-patrol.jpg') ?>" alt="Security patrol officers on active duty">
                 </div>
                 <div class="service-body">
                     <h3 class="service-title">Event & Bouncers</h3>
@@ -885,8 +885,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <div class="service-card">
                 <div class="service-img-wrap">
                     <span class="service-badge"><i class="bi bi-shield-fill-check me-1"></i> Fleet Guarding</span>
-                    <!-- Multi-guard deployment / executive team -->
-                    <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=85" alt="Agency guard force fleet">
+                    <!-- Multi-guard deployment / security force -->
+                    <img src="<?= asset('img/guards/tactical-security-force.jpg') ?>" alt="Tactical security force team">
                 </div>
                 <div class="service-body">
                     <h3 class="service-title">Agency Force (100+)</h3>

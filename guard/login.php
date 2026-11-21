@@ -5,7 +5,10 @@ if (current_guard()) {
     redirect('guard/index.php');
 }
 $error = null;
-$login = '';
+$login = (string)post_str('login', 40);
+if ($login === '') {
+    $login = (string)($_GET['code'] ?? ($_GET['login'] ?? ''));
+}
 if (is_post()) {
     require_csrf();
     $login = (string)post_str('login', 40);
@@ -20,25 +23,49 @@ $title = 'Guard Login';
 <head><?php require __DIR__ . '/_head.php'; ?></head>
 <body class="g-auth">
 <div class="g-auth-card">
-    <div class="text-center mb-4">
+    <div class="text-center mb-3">
         <div class="g-logo"><i class="bi bi-shield-shaded"></i></div>
         <h1 class="h4 fw-bold mb-1"><?= e(company_name()) ?></h1>
-        <div class="text-white-50 small">Bodyguard Duty App</div>
+        <div class="text-white-50 small">Guard & Bodyguard Duty App</div>
     </div>
+
+    <!-- Quick PWA Install Callout -->
+    <div id="pwaBanner" class="p-2 mb-3 rounded-3 text-center" style="background: rgba(245, 179, 1, 0.15); border: 1px solid rgba(245, 179, 1, 0.35);">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <div class="text-start">
+                <div class="small fw-bold text-warning"><i class="bi bi-phone me-1"></i>Install App on Phone</div>
+                <div class="text-white-50" style="font-size: .75rem;">1-tap install for Android & iPhone</div>
+            </div>
+            <a href="<?= url('guard/install.php') ?>" class="btn btn-warning btn-sm fw-bold px-3" style="font-size: .8rem;">
+                <i class="bi bi-download me-1"></i>Install
+            </a>
+        </div>
+    </div>
+
     <?php if ($error): ?><div class="alert alert-danger py-2 small"><i class="bi bi-exclamation-circle me-1"></i><?= e($error) ?></div><?php endif; ?>
     <?php if (!IS_HTTPS && !in_array(explode(':', $_SERVER['HTTP_HOST'] ?? '')[0], ['localhost', '127.0.0.1'], true)): ?>
         <div class="alert alert-warning py-2 small">This site is not using HTTPS. Phone GPS will not work until SSL is enabled.</div>
     <?php endif; ?>
+
     <form method="post">
         <?= csrf_field() ?>
-        <label class="form-label">Employee code or phone</label>
-        <input name="login" class="form-control form-control-lg mb-3" value="<?= e($login) ?>" autocomplete="username" autocapitalize="characters" required autofocus>
-        <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control form-control-lg mb-4" autocomplete="current-password" required>
-        <button class="btn btn-warning btn-lg w-100 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign in</button>
+        <label class="form-label">Employee Code or Phone Number</label>
+        <input name="login" class="form-control form-control-lg mb-3" value="<?= e($login) ?>" autocomplete="username" autocapitalize="characters" placeholder="e.g. SEC-001 or 9876543210" required autofocus>
+        <label class="form-label">Password / PIN</label>
+        <input type="password" name="password" class="form-control form-control-lg mb-4" autocomplete="current-password" placeholder="Enter password" required>
+        <button class="btn btn-warning btn-lg w-100 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Duty</button>
     </form>
-    <p class="text-white-50 small text-center mt-4 mb-2">Forgot your password? Ask your supervisor to reset it.</p>
-    <p class="text-center mb-0"><a href="<?= url('index.php') ?>" class="text-white-50 small"><i class="bi bi-arrow-left me-1"></i>Back to Website</a></p>
+
+    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-white border-opacity-10">
+        <a href="<?= url('guard/install.php') ?>" class="text-warning text-decoration-none small fw-semibold">
+            <i class="bi bi-question-circle me-1"></i>App & APK Guide
+        </a>
+        <a href="<?= url('index.php') ?>" class="text-white-50 small text-decoration-none">
+            <i class="bi bi-house me-1"></i>Agency Website
+        </a>
+    </div>
+
+    <p class="text-white-50 small text-center mt-3 mb-0" style="font-size: .78rem;">Forgot password? Contact control room or supervisor.</p>
 </div>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register(<?= json_encode(url('guard/sw.js')) ?>).catch(() => {});</script>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>

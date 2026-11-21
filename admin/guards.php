@@ -110,7 +110,10 @@ require APP_ROOT . '/includes/layout/header.php';
         <button class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Filter</button>
         <?php if ($search || $category || $weapon || $status || $avail || $clientId): ?><a href="<?= url('admin/guards.php') ?>" class="btn btn-link">Clear</a><?php endif; ?>
     </form>
-    <a href="<?= url('admin/guard_form.php') ?>" class="btn btn-primary"><i class="bi bi-person-plus"></i> Add guard</a>
+    <div class="d-flex gap-2">
+        <a href="<?= url('guard/install.php') ?>" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-phone"></i> App & APK Guide</a>
+        <a href="<?= url('admin/guard_form.php') ?>" class="btn btn-primary"><i class="bi bi-person-plus"></i> Add guard</a>
+    </div>
 </div>
 
 <div class="small text-muted mb-2">

@@ -107,6 +107,92 @@ require APP_ROOT . '/includes/layout/header.php';
                 </dl>
             </div>
         </div>
+
+        <!-- Guard Mobile App Onboarding & Installation Kit -->
+        <div class="card mb-3 border-warning border-opacity-50 shadow-sm" id="onboardingKit">
+            <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between py-2">
+                <span class="fw-bold small"><i class="bi bi-phone-fill text-warning me-1"></i> Mobile App Onboarding Kit</span>
+                <span class="badge bg-warning text-dark fw-bold">Active</span>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div id="guardQrCode" class="d-inline-block p-2 bg-white rounded border shadow-sm mb-1"></div>
+                    <div class="small text-muted" style="font-size: .8rem;">Scan with guard's phone to open Duty App</div>
+                </div>
+
+                <div class="bg-light p-2 rounded mb-3 small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">App Login ID:</span>
+                        <span class="fw-bold"><code><?= e($g['employee_code']) ?></code></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Phone Login:</span>
+                        <span class="fw-bold"><code><?= e($g['phone']) ?></code></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Duty App:</span>
+                        <a href="<?= url('guard/login.php?code=' . urlencode($g['employee_code'])) ?>" target="_blank" class="fw-semibold text-truncate" style="max-width: 170px;">
+                            Open App <i class="bi bi-box-arrow-up-right small"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <?php
+                $guardAppUrl = url('guard/login.php?code=' . urlencode($g['employee_code']));
+                $cleanPhone = preg_replace('/\D/', '', $g['phone']);
+                $waMsg = "🛡️ *" . company_name() . " - Guard Duty App*\n"
+                    . "Hello *" . $g['full_name'] . "*,\n"
+                    . "You have been onboarded as a *" . guard_category_label($g['category'] ?? 'bodyguard') . "* (" . ($g['is_armed'] ? 'Armed' : 'Unarmed') . ").\n\n"
+                    . "📲 *Step 1: Install your Guard App:*\n"
+                    . $guardAppUrl . "\n"
+                    . "(Open link in Chrome or Safari, then tap 'Install App' / 'Add to Home Screen')\n\n"
+                    . "🔑 *Step 2: Sign In:*\n"
+                    . "Login ID: *" . $g['employee_code'] . "* (or your phone " . $g['phone'] . ")\n"
+                    . "Password: Ask your supervisor or use your assigned PIN.\n\n"
+                    . "📍 *Step 3:* Tap 'Start Duty' when on site to begin shift tracking.";
+                $waLink = "https://wa.me/" . $cleanPhone . "?text=" . rawurlencode($waMsg);
+                ?>
+
+                <div class="d-grid gap-2">
+                    <a href="<?= $waLink ?>" target="_blank" class="btn btn-success btn-sm fw-semibold">
+                        <i class="bi bi-whatsapp me-1"></i> Send App & Login via WhatsApp
+                    </a>
+                    <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-printer me-1"></i> Print Onboarding ID Pass
+                    </button>
+                    <a href="<?= url('guard/install.php') ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-question-circle me-1"></i> App Install & APK Guide
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Printable Onboarding ID Pass (Hidden on screen, visible on Print) -->
+        <div class="d-none d-print-block p-4" id="printDutyPass">
+            <div style="border: 2px solid #0b1324; border-radius: 12px; padding: 18px; max-width: 360px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fff;">
+                <div style="text-align: center; border-bottom: 2px solid #f5b301; padding-bottom: 8px; margin-bottom: 12px;">
+                    <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #0b1324;"><?= e(company_name()) ?></h3>
+                    <div style="font-size: 11px; letter-spacing: 1px; color: #64748b; font-weight: 700;">SECURITY GUARD DUTY PASS</div>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                    <div id="printQrCode"></div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 800; color: #0b1324;"><?= e($g['full_name']) ?></div>
+                        <div style="font-size: 12px; color: #334155;">Badge ID: <strong><?= e($g['employee_code']) ?></strong></div>
+                        <div style="font-size: 12px; color: #334155;">Role: <?= e(guard_category_label($g['category'] ?? 'bodyguard')) ?></div>
+                        <div style="font-size: 12px; color: <?= $g['is_armed'] ? '#b91c1c' : '#475569' ?>; font-weight: 600;">
+                            Status: <?= $g['is_armed'] ? 'ARMED WITH FIREARM' : 'UNARMED' ?>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size: 11px; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 8px; color: #475569;">
+                    <strong>Instructions:</strong><br>
+                    1. Scan QR code or visit: <?= e(url('guard/login.php')) ?><br>
+                    2. Tap "Install App" / "Add to Home Screen"<br>
+                    3. Sign in with Badge ID: <strong><?= e($g['employee_code']) ?></strong>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="col-xl-8">
@@ -225,8 +311,18 @@ $mapData = [
                 'radius' => (int)$current['geofence_radius_m'], 'name' => $current['site_name']] : null,
     'date'  => $trailDate,
 ];
-$inlineScript = '<script>
+$inlineScript = '<script src="' . asset('js/qrcode.min.js') . '"></script><script>
 document.addEventListener("DOMContentLoaded", async function () {
+    const appUrl = ' . json_encode($guardAppUrl) . ';
+    const qrEl = document.getElementById("guardQrCode");
+    if (qrEl && typeof QRCode !== "undefined") {
+        new QRCode(qrEl, { text: appUrl, width: 130, height: 130, colorDark: "#0b1324", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+    }
+    const printQrEl = document.getElementById("printQrCode");
+    if (printQrEl && typeof QRCode !== "undefined") {
+        new QRCode(printQrEl, { text: appUrl, width: 85, height: 85, colorDark: "#0b1324", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+    }
+
     const D = ' . json_encode($mapData) . ';
     const map = APP.map.create("guardMap");
     const pts = [];
