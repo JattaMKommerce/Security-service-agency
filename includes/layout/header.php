@@ -9,13 +9,15 @@ $activeNav = $activeNav ?? '';
 $useMap = $useMap ?? false;
 $useCharts = $useCharts ?? false;
 $openAlerts = (int)q_val("SELECT COUNT(*) FROM alerts WHERE status <> 'resolved'");
+$newInquiries = (int)q_val("SELECT COUNT(*) FROM inquiries WHERE status = 'new'");
 
 $nav = [
     ['dashboard',   'admin/index.php',       'bi-speedometer2',      'Dashboard'],
     ['tracking',    'admin/tracking.php',    'bi-geo-alt-fill',      'Live Tracking'],
-    ['guards',      'admin/guards.php',      'bi-person-badge',      'Bodyguards'],
+    ['guards',      'admin/guards.php',      'bi-person-badge',      'Guards & Personnel'],
     ['clients',     'admin/clients.php',     'bi-building',          'Clients'],
     ['assignments', 'admin/assignments.php', 'bi-briefcase',         'Hiring / Deployments'],
+    ['inquiries',   'admin/inquiries.php',   'bi-chat-left-dots',    'Web Inquiries'],
     ['attendance',  'admin/attendance.php',  'bi-calendar-check',    'Attendance'],
     ['alerts',      'admin/alerts.php',      'bi-exclamation-octagon', 'Alerts'],
     ['invoices',    'admin/invoices.php',    'bi-receipt',           'Invoices'],
@@ -54,11 +56,14 @@ $nav = [
                     <i class="bi <?= $icon ?>"></i><span><?= e($text) ?></span>
                     <?php if ($key === 'alerts'): ?>
                         <span class="badge rounded-pill bg-danger ms-auto js-alert-count<?= $openAlerts ? '' : ' d-none' ?>"><?= $openAlerts ?></span>
+                    <?php elseif ($key === 'inquiries' && $newInquiries > 0): ?>
+                        <span class="badge rounded-pill bg-danger ms-auto"><?= $newInquiries ?></span>
                     <?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>
-        <div class="sidebar-footer">
+        <div class="sidebar-footer d-flex flex-column gap-1">
+            <a href="<?= url('index.php') ?>" target="_blank" class="small"><i class="bi bi-globe"></i> View Public Website</a>
             <a href="<?= url('guard/') ?>" target="_blank" class="small"><i class="bi bi-phone"></i> Open Guard App</a>
         </div>
     </aside>

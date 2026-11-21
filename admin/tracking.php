@@ -20,6 +20,23 @@ require APP_ROOT . '/includes/layout/header.php';
                 <span class="small text-muted ms-auto"><i class="bi bi-arrow-repeat"></i> <span data-live-updated>—</span></span>
             </div>
             <input type="search" class="form-control form-control-sm mb-2" id="trkSearch" placeholder="Search name, code, client, site…">
+            <div class="row g-1 mb-2">
+                <div class="col-6">
+                    <select class="form-select form-select-sm" id="trkCategory">
+                        <option value="">All roles</option>
+                        <?php foreach (guard_categories() as $ck => $cv): ?>
+                            <option value="<?= $ck ?>"><?= e($cv) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <select class="form-select form-select-sm" id="trkWeapon">
+                        <option value="">Armed/Unarmed</option>
+                        <option value="armed">Armed (Gun)</option>
+                        <option value="unarmed">Unarmed</option>
+                    </select>
+                </div>
+            </div>
             <select class="form-select form-select-sm mb-2" id="trkClient">
                 <option value="">All clients</option>
                 <?php foreach ($clients as $c): ?>
@@ -43,7 +60,7 @@ require APP_ROOT . '/includes/layout/header.php';
 <?php
 $inlineScript = '<script>
 document.addEventListener("DOMContentLoaded", function () {
-    APP.liveMap({ el: "trkMap", list: "#trkList", search: "#trkSearch", clientFilter: "#trkClient", chips: "#trkChips",
+    APP.liveMap({ el: "trkMap", list: "#trkList", search: "#trkSearch", categoryFilter: "#trkCategory", weaponFilter: "#trkWeapon", clientFilter: "#trkClient", chips: "#trkChips",
                   refreshMs: 10000, focusGuard: ' . ($focus ?: 'null') . ' });
 });
 </script>';

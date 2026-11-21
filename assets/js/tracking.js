@@ -29,7 +29,10 @@
             return '<div class="map-popup">' +
                 '<div class="d-flex align-items-center gap-2 mb-2">' +
                 (g.photo ? '<img src="' + esc(g.photo) + '" class="avatar avatar-md">' : '<span class="avatar avatar-md avatar-initials">' + esc(APP.map.initialsOf(g.name)) + '</span>') +
-                '<div><div class="t">' + esc(g.name) + '</div><div class="small text-muted">' + esc(g.code) + (g.armed ? ' · <i class="bi bi-shield-fill-check"></i> Armed' : '') + '</div></div></div>' +
+                '<div><div class="t">' + esc(g.name) + '</div>' +
+                '<div class="small text-muted">' + esc(g.code) + ' · <span class="badge bg-light text-dark border">' + esc(g.category_label || 'Guard') + '</span>' +
+                (g.armed ? ' <span class="badge bg-warning text-dark"><i class="bi bi-shield-fill-check"></i> Armed (Gun)</span>' : ' <span class="badge bg-light text-secondary">Unarmed</span>') +
+                '</div></div></div>' +
                 '<div class="mb-2"><span class="badge" style="background:' + s.color + '">' + esc(g.status_label) + '</span></div>' +
                 (g.client_name ? '<div class="hired-by mb-2"><i class="bi bi-briefcase-fill"></i> Hired by ' + esc(g.client_name) + '</div>' : '<div class="small text-muted mb-2">Not hired — available</div>') +
                 kv('Site', g.site_name ? esc(g.site_name) : null) +
@@ -49,7 +52,16 @@
         function matches(g) {
             if (filterStatus !== 'all' && g.status !== filterStatus) return false;
             const term = (cfg.search ? document.querySelector(cfg.search).value : '').trim().toLowerCase();
-            if (term && !(g.name + ' ' + g.code + ' ' + (g.client_name || '') + ' ' + (g.site_name || '') + ' ' + g.phone).toLowerCase().includes(term)) return false;
+            if (term && !(g.name + ' ' + g.code + ' ' + (g.client_name || '') + ' ' + (g.site_name || '') + ' ' + (g.category_label || '') + ' ' + g.phone).toLowerCase().includes(term)) return false;
+            if (cfg.categoryFilter) {
+                const cv = document.querySelector(cfg.categoryFilter).value;
+                if (cv && g.category !== cv) return false;
+            }
+            if (cfg.weaponFilter) {
+                const wv = document.querySelector(cfg.weaponFilter).value;
+                if (wv === 'armed' && !g.armed) return false;
+                if (wv === 'unarmed' && g.armed) return false;
+            }
             return true;
         }
 
@@ -118,8 +130,11 @@
                 const s = APP.map.STATUS[g.status] || APP.map.STATUS.available;
                 return '<div class="tracking-item' + (g.id === selectedId ? ' active' : '') + '" data-id="' + g.id + '">' +
                     '<span class="status-dot" style="background:' + s.color + ';width:11px;height:11px"></span>' +
-                    '<div class="min-w-0 flex-fill"><div class="fw-semibold text-truncate">' + esc(g.name) + ' <span class="text-muted fw-normal small">' + esc(g.code) + '</span></div>' +
-                    '<div class="meta text-truncate">' + (g.client_name ? '<i class="bi bi-briefcase"></i> ' + esc(g.client_name) : 'Available') +
+                    '<div class="min-w-0 flex-fill"><div class="fw-semibold text-truncate">' + esc(g.name) +
+                    (g.armed ? ' <i class="bi bi-shield-fill-check text-warning" title="Armed (Gun)"></i>' : '') +
+                    ' <span class="text-muted fw-normal small">' + esc(g.code) + '</span></div>' +
+                    '<div class="meta text-truncate">' + esc(g.category_label || 'Guard') + ' · ' +
+                    (g.client_name ? '<i class="bi bi-briefcase"></i> ' + esc(g.client_name) : 'Available') +
                     ' · ' + (g.lat === null ? 'no location yet' : esc(g.last_seen_ago)) + '</div></div>' +
                     '<span class="small text-nowrap fw-semibold" style="color:' + s.color + '">' + esc(SHORT[g.status] || s.label) + '</span></div>';
             }).join('');
@@ -184,6 +199,8 @@
         }
 
         if (cfg.search) document.querySelector(cfg.search).addEventListener('input', render);
+        if (cfg.categoryFilter) document.querySelector(cfg.categoryFilter).addEventListener('change', render);
+        if (cfg.weaponFilter) document.querySelector(cfg.weaponFilter).addEventListener('change', render);
         if (cfg.clientFilter) document.querySelector(cfg.clientFilter).addEventListener('change', () => { fitted = false; load(); });
         if (cfg.chips) document.querySelectorAll(cfg.chips + ' [data-filter]').forEach((b) => b.addEventListener('click', () => {
             filterStatus = b.dataset.filter;

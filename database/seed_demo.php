@@ -56,13 +56,17 @@ $clients = [
 ];
 
 $pw = password_hash('guard123', PASSWORD_DEFAULT);
+$demoCats = ['bodyguard', 'building_security', 'agency_security', 'event_security', 'patrol'];
 $guardIds = [];
 for ($i = 1; $i <= 40; $i++) {
     $name = $first[($i * 7) % count($first)] . ' ' . $last[($i * 11) % count($last)];
-    q('INSERT INTO guards (employee_code, full_name, phone, password_hash, gender, city, experience_years, is_armed, skills, joined_on, status, blood_group)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [
-        sprintf('DEMO-%03d', $i), $name, '98' . str_pad((string)(20000000 + $i * 7919), 8, '0', STR_PAD_LEFT), $pw,
-        $i % 6 === 0 ? 'female' : 'male', 'Mumbai', mt_rand(1, 15), $i % 4 === 0 ? 1 : 0,
+    $cat = $demoCats[($i - 1) % count($demoCats)];
+    $isArmed = $i % 3 === 0 ? 1 : 0;
+    $lic = $isArmed ? sprintf('WPN-%04d', 1000 + $i) : null;
+    q('INSERT INTO guards (employee_code, category, full_name, phone, password_hash, gender, city, experience_years, is_armed, weapon_license_no, skills, joined_on, status, blood_group)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
+        sprintf('DEMO-%03d', $i), $cat, $name, '98' . str_pad((string)(20000000 + $i * 7919), 8, '0', STR_PAD_LEFT), $pw,
+        $i % 6 === 0 ? 'female' : 'male', 'Mumbai', mt_rand(1, 15), $isArmed, $lic,
         implode(', ', array_slice($skills, $i % 5, 2)), date('Y-m-d', strtotime('-' . mt_rand(30, 1500) . ' days')),
         $i > 38 ? 'on_leave' : 'active', ['A+', 'B+', 'O+', 'AB+', 'O-'][$i % 5],
     ]);

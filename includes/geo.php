@@ -204,7 +204,7 @@ function live_status_meta(string $s): array
 /** SQL fragment selecting guards with their live context for maps and lists. */
 function guards_live_sql(string $where = '1=1'): string
 {
-    return "SELECT g.id, g.employee_code, g.full_name, g.phone, g.photo, g.status, g.is_on_duty, g.is_armed,
+    return "SELECT g.id, g.employee_code, g.category, g.full_name, g.phone, g.photo, g.status, g.is_on_duty, g.is_armed,
                    g.last_lat, g.last_lng, g.last_accuracy, g.last_speed, g.last_battery, g.last_seen_at,
                    a.id AS assignment_id, a.site_name, a.site_lat, a.site_lng, a.geofence_radius_m,
                    a.shift_start, a.shift_end, c.id AS client_id, c.name AS client_name, c.client_code,

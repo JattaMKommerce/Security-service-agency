@@ -1,11 +1,12 @@
 # Security Agency Management System
 
-Bodyguard management with live GPS tracking on OpenStreetMap. It has an admin portal for the control room and a mobile web app for guards.
+Complete security agency operations platform with live OpenStreetMap GPS tracking, mobile-friendly public landing website, multi-category guard management (Personal Bodyguards, Building Security, Agency Security, Event Security, Mobile Patrol), and 1-click armed/gun authorization toggles.
 
-- **Admin portal** (`/login.php`): dashboard, live tracking map, bodyguards, clients, hiring/deployments ("Hired by <client>"), attendance, SOS and geofence alerts, invoices, settings.
-- **Guard app** (`/guard/`): guards sign in on their phone, start and end duty with GPS, share their live location while on duty, and use a press-and-hold SOS button. It can be installed on the phone's home screen.
+- **Public Static Website** (`/` or `/index.php`): Mobile-first, responsive landing website showcasing guard services, armed/unarmed protocols, live OpenStreetMap GPS dispatch technology, and an instant quote/security inquiry booking form.
+- **Admin Portal** (`/login.php`): Control room dashboard, live tracking map with OpenStreetMap, guard fleet management with 1-click gun enable/disable toggles, client registry, multi-guard hiring & deployments ("Hired by <client>"), web quote inquiries, attendance logs, SOS and geofence alerts, automated billing invoices, system settings.
+- **Guard Mobile Web App** (`/guard/`): Mobile PWA for guards to sign in, check in/out with GPS geofence validation, stream location updates every 20s while on duty, and trigger an emergency SOS panic button.
 
-Built with PHP 8.1+, MySQL/MariaDB, Bootstrap 5, Leaflet and OpenStreetMap. It needs no Composer or Node, so it runs on any Hostinger plan.
+Built with pure native PHP 8.1+, MySQL/MariaDB, Bootstrap 5, Leaflet, and OpenStreetMap. Zero composer/node build dependencies—ready for Hostinger shared hosting or VPS.
 
 ---
 

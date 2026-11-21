@@ -290,6 +290,43 @@ function label(string $value): string
     return ucwords(str_replace('_', ' ', $value));
 }
 
+function guard_categories(): array
+{
+    return [
+        'bodyguard'         => 'Personal Bodyguard',
+        'building_security' => 'Building Security',
+        'agency_security'   => 'Agency Security',
+        'event_security'    => 'Event Security',
+        'patrol'            => 'Mobile Patrol & Escort',
+    ];
+}
+
+function guard_category_label(string $cat): string
+{
+    return guard_categories()[$cat] ?? label($cat);
+}
+
+function category_badge(string $cat): string
+{
+    $icons = [
+        'bodyguard'         => 'bi-person-shield',
+        'building_security' => 'bi-building-lock',
+        'agency_security'   => 'bi-shield-check',
+        'event_security'    => 'bi-people',
+        'patrol'            => 'bi-car-front',
+    ];
+    $icon = $icons[$cat] ?? 'bi-shield';
+    return '<span class="badge badge-soft-primary"><i class="bi ' . $icon . ' me-1"></i>' . e(guard_category_label($cat)) . '</span>';
+}
+
+function weapon_badge(bool $isArmed): string
+{
+    if ($isArmed) {
+        return '<span class="badge bg-warning text-dark"><i class="bi bi-shield-fill-check me-1"></i>Armed (Gun)</span>';
+    }
+    return '<span class="badge badge-soft-secondary"><i class="bi bi-shield me-1"></i>Unarmed</span>';
+}
+
 /** Bootstrap badge for any status value used in the app. */
 function status_badge(string $status): string
 {

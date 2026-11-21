@@ -30,6 +30,7 @@ if (is_post() && ($_POST['action'] ?? 'save') === 'save') {
     require_csrf();
     $d = [
         'employee_code'           => strtoupper((string)post_str('employee_code', 20)),
+        'category'                => in_array($_POST['category'] ?? '', array_keys(guard_categories()), true) ? $_POST['category'] : 'bodyguard',
         'full_name'               => post_str('full_name', 120),
         'phone'                   => preg_replace('/[^\d+]/', '', (string)post_str('phone', 20)),
         'email'                   => post_str('email', 150),
@@ -107,7 +108,7 @@ if (is_post() && ($_POST['action'] ?? 'save') === 'save') {
     $guard = array_merge($guard ?? [], $d);
 }
 
-$g = $guard ?? ['status' => 'active', 'employee_code' => next_code('guards', 'employee_code', 'GRD-'), 'experience_years' => 0, 'is_armed' => 0, 'joined_on' => date('Y-m-d')];
+$g = $guard ?? ['status' => 'active', 'category' => 'bodyguard', 'employee_code' => next_code('guards', 'employee_code', 'GRD-'), 'experience_years' => 0, 'is_armed' => 0, 'joined_on' => date('Y-m-d')];
 $v = fn($k) => e($g[$k] ?? '');
 
 $pageTitle = $id ? 'Edit Bodyguard' : 'Add Bodyguard';
@@ -145,17 +146,23 @@ require APP_ROOT . '/includes/layout/header.php';
 
                 <div class="form-section-title">Identity & professional</div>
                 <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label required">Security Category / Role</label>
+                        <select name="category" class="form-select" required>
+                            <?php foreach (guard_categories() as $ck => $cv): ?>
+                                <option value="<?= $ck ?>" <?= ($g['category'] ?? 'bodyguard') === $ck ? 'selected' : '' ?>><?= e($cv) ?></option>
+                            <?php endforeach; ?>
+                        </select></div>
                     <div class="col-md-4"><label class="form-label">ID proof type</label>
                         <select name="id_proof_type" class="form-select"><option value="">—</option><?php foreach (['Aadhaar', 'PAN', 'Voter ID', 'Driving Licence', 'Passport', 'Other'] as $s): ?><option <?= ($g['id_proof_type'] ?? '') === $s ? 'selected' : '' ?>><?= $s ?></option><?php endforeach; ?></select></div>
                     <div class="col-md-4"><label class="form-label">ID proof number</label><input name="id_proof_number" class="form-control" value="<?= $v('id_proof_number') ?>"></div>
                     <div class="col-md-4"><label class="form-label">Joined on</label><input type="date" name="joined_on" class="form-control" value="<?= $v('joined_on') ?>"></div>
                     <div class="col-md-4"><label class="form-label">Experience (years)</label><input type="number" min="0" max="60" name="experience_years" class="form-control" value="<?= $v('experience_years') ?>"></div>
-                    <div class="col-md-8"><label class="form-label">Skills / training</label><input name="skills" class="form-control" value="<?= $v('skills') ?>" placeholder="e.g. Close protection, First aid, Driving, Martial arts"></div>
+                    <div class="col-md-4"><label class="form-label">Skills / training</label><input name="skills" class="form-control" value="<?= $v('skills') ?>" placeholder="e.g. Close protection, First aid, Driving"></div>
                     <div class="col-md-4 d-flex align-items-end">
                         <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="is_armed" value="1" id="isArmed" <?= !empty($g['is_armed']) ? 'checked' : '' ?>>
-                            <label class="form-check-label fw-semibold" for="isArmed">Armed bodyguard</label></div>
+                            <label class="form-check-label fw-semibold" for="isArmed">Armed with Gun (Firearm)</label></div>
                     </div>
-                    <div class="col-md-8" id="weaponWrap"><label class="form-label">Weapon licence no.</label><input name="weapon_license_no" class="form-control" value="<?= $v('weapon_license_no') ?>"></div>
+                    <div class="col-md-8" id="weaponWrap"><label class="form-label">Weapon licence no.</label><input name="weapon_license_no" class="form-control" value="<?= $v('weapon_license_no') ?>" placeholder="e.g. LIC-DL-2024-998"></div>
                 </div>
 
                 <div class="form-section-title">Emergency contact</div>

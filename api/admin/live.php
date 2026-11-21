@@ -27,6 +27,8 @@ foreach ($rows as $g) {
     $guards[] = [
         'id'            => (int)$g['id'],
         'code'          => $g['employee_code'],
+        'category'      => $g['category'] ?? 'bodyguard',
+        'category_label'=> guard_category_label($g['category'] ?? 'bodyguard'),
         'name'          => $g['full_name'],
         'phone'         => $g['phone'],
         'photo'         => guard_photo_url($g['photo']),

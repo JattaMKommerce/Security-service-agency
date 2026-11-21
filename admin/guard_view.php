@@ -18,6 +18,11 @@ if (is_post()) {
         clear_guard_login_lock($id);
         log_activity('guard.reset_password', $g['employee_code']);
         flash('success', 'New app password for ' . $g['full_name'] . ': ' . $pw . ' — share it with the guard. It will not be shown again.');
+    } elseif ($action === 'toggle_armed') {
+        $newArmed = $g['is_armed'] ? 0 : 1;
+        q('UPDATE guards SET is_armed = ? WHERE id = ?', [$newArmed, $id]);
+        log_activity($newArmed ? 'guard.armed_enable' : 'guard.armed_disable', $g['employee_code'] . ' ' . $g['full_name']);
+        flash('success', $newArmed ? 'Gun / firearm authorization ENABLED for ' . $g['full_name'] . '.' : 'Gun authorization DISABLED for ' . $g['full_name'] . '.');
     } elseif ($action === 'force_checkout') {
         $r = end_shift($id, null, null, (int)$admin['id'], 'Checked out by admin ' . $admin['name']);
         log_activity('attendance.force_checkout', $g['employee_code']);
@@ -55,6 +60,14 @@ require APP_ROOT . '/includes/layout/header.php';
         <?php endif; ?>
         <a href="<?= url('admin/tracking.php?guard_id=' . $id) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-geo-alt"></i> Track live</a>
         <a href="<?= url('admin/guard_form.php?id=' . $id) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+        <form method="post" class="d-inline">
+            <?= csrf_field() ?><input type="hidden" name="action" value="toggle_armed">
+            <?php if ($g['is_armed']): ?>
+                <button class="btn btn-outline-danger btn-sm" title="Click to disable firearm authorization"><i class="bi bi-toggle-on text-success"></i> Gun: Enabled (Disable)</button>
+            <?php else: ?>
+                <button class="btn btn-outline-success btn-sm" title="Click to authorize firearm"><i class="bi bi-toggle-off text-muted"></i> Gun: Disabled (Enable)</button>
+            <?php endif; ?>
+        </form>
         <form method="post" class="d-inline" data-confirm="Generate a new app password for this guard?">
             <?= csrf_field() ?><input type="hidden" name="action" value="reset_password">
             <button class="btn btn-outline-secondary btn-sm"><i class="bi bi-key"></i> Reset app password</button>
@@ -68,9 +81,10 @@ require APP_ROOT . '/includes/layout/header.php';
             <div class="card-body text-center">
                 <?= avatar($g['full_name'], $g['photo'], 'xl') ?>
                 <h2 class="h5 fw-bold mt-3 mb-0"><?= e($g['full_name']) ?></h2>
-                <div class="text-muted small mb-2"><?= e($g['employee_code']) ?><?= $g['is_armed'] ? ' · <i class="bi bi-shield-fill-check text-warning"></i> Armed' : '' ?></div>
-                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                <div class="text-muted small mb-2"><?= e($g['employee_code']) ?> · <?= category_badge($g['category'] ?? 'bodyguard') ?></div>
+                <div class="d-flex justify-content-center gap-2 flex-wrap mb-2">
                     <?= status_badge($g['status']) ?>
+                    <?= weapon_badge((bool)$g['is_armed']) ?>
                     <span class="badge" style="background:<?= $liveColor ?>"><?= e($liveLabel) ?></span>
                 </div>
             </div>

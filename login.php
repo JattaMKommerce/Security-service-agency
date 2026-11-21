@@ -60,8 +60,9 @@ $flashes = flashes();
         </div>
         <button class="btn btn-primary w-100 py-2"><i class="bi bi-box-arrow-in-right me-1"></i> Sign in</button>
     </form>
-    <div class="text-center mt-4 small">
-        <a href="<?= url('guard/login.php') ?>"><i class="bi bi-phone me-1"></i>Bodyguard? Open the guard app</a>
+    <div class="text-center mt-4 small d-flex flex-column gap-2">
+        <a href="<?= url('guard/login.php') ?>"><i class="bi bi-phone me-1"></i>Security Personnel? Open the Guard App</a>
+        <a href="<?= url('index.php') ?>" class="text-muted"><i class="bi bi-arrow-left me-1"></i>Back to Public Website</a>
     </div>
 </div>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>

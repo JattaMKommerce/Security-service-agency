@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS admins (
 CREATE TABLE IF NOT EXISTS guards (
     id                      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     employee_code           VARCHAR(20)  NOT NULL,
+    category                ENUM('bodyguard','building_security','agency_security','event_security','patrol') NOT NULL DEFAULT 'bodyguard',
     full_name               VARCHAR(120) NOT NULL,
     phone                   VARCHAR(20)  NOT NULL,
     email                   VARCHAR(150) NULL,
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS guards (
     updated_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_guard_code (employee_code),
     UNIQUE KEY uq_guard_phone (phone),
+    KEY idx_guard_category (category),
     KEY idx_guard_status (status),
     KEY idx_guard_seen (last_seen_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -239,6 +241,20 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     attempted_at    DATETIME NOT NULL,
     KEY idx_attempt (ip, attempted_at),
     KEY idx_attempt_id (identifier, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS inquiries (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name            VARCHAR(120) NOT NULL,
+    phone           VARCHAR(30)  NOT NULL,
+    email           VARCHAR(150) NULL,
+    service_type    VARCHAR(50)  NOT NULL DEFAULT 'bodyguard',
+    is_armed        TINYINT(1)   NOT NULL DEFAULT 0,
+    guards_needed   INT UNSIGNED NOT NULL DEFAULT 1,
+    city            VARCHAR(80)  NULL,
+    message         TEXT         NULL,
+    status          ENUM('new','contacted','closed') NOT NULL DEFAULT 'new',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

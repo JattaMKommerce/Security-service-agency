@@ -37,7 +37,8 @@ $title = 'Guard Login';
         <input type="password" name="password" class="form-control form-control-lg mb-4" autocomplete="current-password" required>
         <button class="btn btn-warning btn-lg w-100 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign in</button>
     </form>
-    <p class="text-white-50 small text-center mt-4 mb-0">Forgot your password? Ask your supervisor to reset it.</p>
+    <p class="text-white-50 small text-center mt-4 mb-2">Forgot your password? Ask your supervisor to reset it.</p>
+    <p class="text-center mb-0"><a href="<?= url('index.php') ?>" class="text-white-50 small"><i class="bi bi-arrow-left me-1"></i>Back to Website</a></p>
 </div>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register(<?= json_encode(url('guard/sw.js')) ?>).catch(() => {});</script>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>
