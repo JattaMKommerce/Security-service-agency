@@ -44,7 +44,7 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title><?= e($compName) ?> · Elite Security & Bodyguard Protection</title>
-    <meta name="description" content="Well-trained, police-verified security guards and VIP bodyguards. Armed and unarmed officers with 24/7 safety and live GPS tracking.">
+    <meta name="description" content="Professional, well-trained security guards and VIP bodyguards. Dedicated unarmed officers and statutorily licensed armed personnel for corporate, residential, and private protection.">
     <link rel="icon" href="<?= asset('img/icon.svg') ?>" type="image/svg+xml">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
@@ -216,6 +216,22 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
         .btn-sm {
             padding: 0.45rem 0.85rem;
             font-size: 0.84rem;
+        }
+        .discreet-login {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            transition: color 0.15s ease, background 0.15s ease;
+        }
+        .discreet-login:hover {
+            color: var(--text-primary);
+            background: #f1f5f9;
         }
 
         /* Classy Hero Section */
@@ -733,8 +749,11 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <a href="tel:<?= e($compPhone) ?>" class="btn btn-navy btn-sm">
                 <i class="bi bi-telephone-fill"></i> Call <?= e($compPhone) ?>
             </a>
-            <a href="<?= url('login.php') ?>" class="btn btn-outline btn-sm">
-                <i class="bi bi-person-fill-lock"></i> Admin Portal
+            <a href="#hire" class="btn btn-outline btn-sm">
+                <i class="bi bi-shield-check"></i> Request Guard
+            </a>
+            <a href="<?= url('login.php') ?>" class="discreet-login" title="Staff & Admin Portal">
+                <i class="bi bi-lock-fill"></i> Sign In
             </a>
         </div>
     </div>
@@ -745,14 +764,14 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
     <div class="container hero-grid">
         <div>
             <div class="ios-badge">
-                <i class="bi bi-shield-fill-check"></i>
-                <span>Government Licensed & Police-Verified Force</span>
+                <i class="bi bi-shield-check"></i>
+                <span>Professional Security & Guard Services</span>
             </div>
             <h1 class="hero-title">
                 Well-Trained Security Guards & VIP Bodyguard Protection
             </h1>
             <p class="hero-desc">
-                Total safety for your home, commercial building, VIP convoy, or corporate event. Over 100+ highly trained, disciplined personnel equipped with live OpenStreetMap GPS tracking. Available armed (with gun) or unarmed.
+                Reliable security protection for your premises, corporate facility, executive detail, or private event. Disciplined unarmed guarding officers and statutorily licensed armed security personnel deployed with continuous field supervision.
             </p>
 
             <div class="hero-actions">
@@ -778,8 +797,8 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                     <i class="bi bi-patch-check-fill"></i>
                 </div>
                 <div class="floating-safety-text">
-                    <strong>100% Secured & Police Cleared</strong>
-                    <span>Military & Police Academy Standards • 24/7 Rapid Backup</span>
+                    <strong>Trained & Disciplined Personnel</strong>
+                    <span>Continuous Supervision & 24/7 Operations Room</span>
                 </div>
             </div>
         </div>
@@ -792,29 +811,29 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
         <div class="trust-item">
             <div class="trust-icon"><i class="bi bi-shield-check"></i></div>
             <div>
-                <h4>Vetted & Verified</h4>
-                <p>Thorough police & identity checks</p>
+                <h4>Background Checked</h4>
+                <p>Structured identity & reference checks</p>
             </div>
         </div>
         <div class="trust-item">
-            <div class="trust-icon"><i class="bi bi-crosshair2"></i></div>
+            <div class="trust-icon"><i class="bi bi-shield-lock-fill"></i></div>
             <div>
-                <h4>Armed & Unarmed</h4>
-                <p>Licensed firearm specialists available</p>
+                <h4>Armed & Unarmed Options</h4>
+                <p>Statutorily licensed protection available</p>
             </div>
         </div>
         <div class="trust-item">
             <div class="trust-icon"><i class="bi bi-geo-alt-fill"></i></div>
             <div>
-                <h4>Live GPS Tracking</h4>
-                <p>Track your guard on OpenStreetMap</p>
+                <h4>Active Shift Oversight</h4>
+                <p>Verified duty check-ins & reporting</p>
             </div>
         </div>
         <div class="trust-item">
-            <div class="trust-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+            <div class="trust-icon"><i class="bi bi-headset"></i></div>
             <div>
-                <h4>10–15 Min Response</h4>
-                <p>Immediate dispatch & SOS support</p>
+                <h4>24/7 Operations Desk</h4>
+                <p>Continuous support & active coordination</p>
             </div>
         </div>
     </div>
@@ -847,16 +866,16 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                 </div>
             </div>
 
-            <!-- 2. Building Security -->
+            <!-- 2. Facility & Gatekeeping -->
             <div class="service-card">
                 <div class="service-img-wrap">
                     <span class="service-badge"><i class="bi bi-building-lock me-1"></i> 24/7 Gatekeeping</span>
-                    <!-- Professional female security officer on duty with radio -->
-                    <img src="<?= asset('img/guards/guard-female-radio.jpg') ?>" alt="Trained security officer on duty with radio communication">
+                    <!-- Uniformed security officer at residential gate and boom barrier cabin -->
+                    <img src="<?= asset('img/guards/residential-gate-guard.jpg') ?>" alt="Trained security officer at residential boom barrier entrance">
                 </div>
                 <div class="service-body">
-                    <h3 class="service-title">Building & Facility</h3>
-                    <p class="service-text">Round-the-clock manned security for corporate offices, tech parks, gated residences, and retail premises. Access control and perimeter safety.</p>
+                    <h3 class="service-title">Facility & Gatekeeping</h3>
+                    <p class="service-text">Round-the-clock manned security and gatekeeping for residential complexes, corporate campuses, gated communities, and tech parks. Visitor logging and barrier management.</p>
                     <div class="service-footer">
                         <span>Facility Guarding</span>
                         <i class="bi bi-arrow-right"></i>
@@ -873,7 +892,7 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                 </div>
                 <div class="service-body">
                     <h3 class="service-title">Event & Screening</h3>
-                    <p class="service-text">Robust entry screening with metal detectors, bag checks, and crowd control for galas, weddings, private exhibitions, and corporate venues.</p>
+                    <p class="service-text">Robust entry screening with handheld metal detectors, visitor registers, and crowd control for galas, weddings, private exhibitions, and corporate venues.</p>
                     <div class="service-footer">
                         <span>Events & Screening</span>
                         <i class="bi bi-arrow-right"></i>
@@ -881,18 +900,18 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                 </div>
             </div>
 
-            <!-- 4. Agency Guard Force -->
+            <!-- 4. Agency Security Force -->
             <div class="service-card">
                 <div class="service-img-wrap">
-                    <span class="service-badge"><i class="bi bi-shield-fill-check me-1"></i> Fleet Guarding</span>
-                    <!-- Multi-guard deployment / security force -->
-                    <img src="<?= asset('img/guards/tactical-security-force.jpg') ?>" alt="Tactical security force team">
+                    <span class="service-badge"><i class="bi bi-buildings-fill me-1"></i> Corporate Force</span>
+                    <!-- Uniformed security officer at Eminence Corporate Park entrance -->
+                    <img src="<?= asset('img/guards/corporate-park-guard.jpg') ?>" alt="Uniformed security officer at corporate park entrance">
                 </div>
                 <div class="service-body">
-                    <h3 class="service-title">Agency Force (100+)</h3>
-                    <p class="service-text">Full-scale security deployments of 10 to 100+ guards for industrial factories, hospitals, logistics hubs, and banks with automated supervisor oversight.</p>
+                    <h3 class="service-title">Agency Security Force</h3>
+                    <p class="service-text">Comprehensive security personnel teams for commercial business parks, industrial facilities, healthcare centers, and multi-entrance properties with centralized supervisor oversight.</p>
                     <div class="service-footer">
-                        <span>Commercial Fleet</span>
+                        <span>Corporate Force</span>
                         <i class="bi bi-arrow-right"></i>
                     </div>
                 </div>
@@ -901,41 +920,41 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
     </div>
 </section>
 
-<!-- Armed vs Unarmed Choice -->
+<!-- Security & Protection Protocols -->
 <section class="section">
     <div class="container">
         <div class="section-head">
-            <span class="section-tag">Firearm & Protection Protocol</span>
-            <h2 class="section-title">Armed or Unarmed? Configure as Needed</h2>
-            <p class="section-desc">Not every assignment requires a firearm. We clearly equip and deploy personnel based on your exact threat profile.</p>
+            <span class="section-tag">Security & Protection Protocols</span>
+            <h2 class="section-title">Unarmed Guarding & Licensed Armed Security</h2>
+            <p class="section-desc">Services are configured based on your operational environment. Armed protection is provided exclusively by personnel holding valid, verified statutory arms licenses in compliance with governing laws.</p>
         </div>
 
         <div class="weapon-box">
             <div class="weapon-card unarmed">
                 <div class="weapon-card-tag">
-                    <i class="bi bi-shield-check"></i> Standard Vigilance
+                    <i class="bi bi-shield-check"></i> Standard Security
                 </div>
                 <h3>Trained Unarmed Officers</h3>
                 <p>The standard choice for corporate offices, apartment societies, retail showrooms, and routine access control. Focus on de-escalation, visitor screening, and perimeter presence.</p>
                 <ul class="weapon-list">
-                    <li><i class="bi bi-check2-circle"></i> Non-violent conflict de-escalation trained</li>
-                    <li><i class="bi bi-check2-circle"></i> Gatekeeping, visitor registers & surveillance</li>
-                    <li><i class="bi bi-check2-circle"></i> Emergency CPR & evacuation certified</li>
-                    <li><i class="bi bi-check2-circle"></i> OpenStreetMap live GPS check-in active</li>
+                    <li><i class="bi bi-check2-circle"></i> Conflict de-escalation & situational awareness</li>
+                    <li><i class="bi bi-check2-circle"></i> Gatekeeping, visitor registers & access surveillance</li>
+                    <li><i class="bi bi-check2-circle"></i> Emergency evacuation & first response trained</li>
+                    <li><i class="bi bi-check2-circle"></i> Digital shift check-in & verified reporting</li>
                 </ul>
             </div>
 
             <div class="weapon-card armed">
                 <div class="weapon-card-tag">
-                    <i class="bi bi-shield-fill-check"></i> High Threat Defense
+                    <i class="bi bi-shield-lock-fill"></i> Statutorily Licensed
                 </div>
-                <h3>Licensed Armed Guards (With Gun)</h3>
-                <p>Licensed firearm specialists carrying verified handguns or shotguns for VIP escort, cash-in-transit, jewelry and bullion vaults, or high-risk private assignments.</p>
+                <h3>Licensed Armed Security Personnel</h3>
+                <p>Armed security personnel deployed exclusively for high-risk assets, executive escorts, and secure transit, operating strictly with verified, government-issued arms licenses in compliance with statutory regulations.</p>
                 <ul class="weapon-list">
-                    <li><i class="bi bi-check2-circle"></i> Government-registered weapon license verified</li>
-                    <li><i class="bi bi-check2-circle"></i> Tactical marksmanship and weapon retention trained</li>
-                    <li><i class="bi bi-check2-circle"></i> Armed close-protection convoy escort</li>
-                    <li><i class="bi bi-check2-circle"></i> Instant 1-click authorization toggle in admin</li>
+                    <li><i class="bi bi-check2-circle"></i> Deployed strictly with valid, verified statutory arms licenses</li>
+                    <li><i class="bi bi-check2-circle"></i> Firearm safety, retention, and legal compliance trained</li>
+                    <li><i class="bi bi-check2-circle"></i> Executive escort & high-value transit protection</li>
+                    <li><i class="bi bi-check2-circle"></i> Subject to internal command verification and authorization</li>
                 </ul>
             </div>
         </div>
@@ -946,9 +965,9 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
 <section class="section section-alt" id="hire">
     <div class="container">
         <div class="section-head">
-            <span class="section-tag">Instant Guard Dispatch</span>
+            <span class="section-tag">Direct Guard Dispatch</span>
             <h2 class="section-title">Request Your Security Detail</h2>
-            <p class="section-desc">Submit your requirement below. Our dispatch commander will call you back within 10 minutes to arrange your guard deployment.</p>
+            <p class="section-desc">Submit your requirement below. Our operations team will call you back promptly to arrange your security deployment.</p>
         </div>
 
         <div class="booking-card">
@@ -984,17 +1003,17 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                         <label class="form-label">Security Category</label>
                         <select name="service_type" class="form-select">
                             <option value="bodyguard">Personal VIP Bodyguard</option>
-                            <option value="building_security">Building & Society Security</option>
-                            <option value="event_security">Event Security & Bouncers</option>
-                            <option value="agency_security">Commercial Force (10–100+ Guards)</option>
-                            <option value="patrol">Mobile Patrol & Convoy Escort</option>
+                            <option value="building_security">Facility & Gated Society Security</option>
+                            <option value="event_security">Event Security & Screening</option>
+                            <option value="agency_security">Agency Security Force (Team Deployment)</option>
+                            <option value="patrol">Mobile Patrol & Escort</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Weapon Authorization</label>
+                        <label class="form-label">Weapon Protocol</label>
                         <select name="is_armed" class="form-select">
-                            <option value="0">Unarmed Guards (Standard)</option>
-                            <option value="1">Armed Guards (With Licensed Gun)</option>
+                            <option value="0">Unarmed Security (Standard)</option>
+                            <option value="1">Licensed Armed Security (Subject to statutory licensing)</option>
                         </select>
                     </div>
                 </div>
@@ -1043,14 +1062,15 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             <ul class="footer-links">
                 <li><a href="tel:<?= e($compPhone) ?>"><i class="bi bi-telephone me-1"></i> <?= e($compPhone) ?></a></li>
                 <li><a href="https://wa.me/<?= $phoneClean ?>" target="_blank"><i class="bi bi-whatsapp me-1"></i> WhatsApp</a></li>
-                <li><a href="<?= url('login.php') ?>"><i class="bi bi-lock me-1"></i> Admin Command Center</a></li>
+                <li><a href="<?= url('login.php') ?>"><i class="bi bi-shield-lock me-1"></i> Staff & Admin Command Center</a></li>
                 <li><a href="<?= url('guard/login.php') ?>"><i class="bi bi-phone me-1"></i> Guard Mobile App</a></li>
+                <li><a href="<?= url('guard/install.php') ?>"><i class="bi bi-download me-1"></i> Mobile App Guide</a></li>
             </ul>
         </div>
 
         <div class="footer-bottom">
-            <div>&copy; <?= date('Y') ?> <?= e($compName) ?>. All rights reserved. Government Authorized Security Agency.</div>
-            <div>24/7 OpenStreetMap GPS Tracking & Armed/Unarmed Personnel</div>
+            <div>&copy; <?= date('Y') ?> <?= e($compName) ?>. All rights reserved. Professional Security & Protection Services.</div>
+            <div>Dedicated On-Site Security & Close Protection Services</div>
         </div>
     </div>
 </footer>
