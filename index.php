@@ -713,7 +713,7 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
         }
         .service-img-container {
             position: relative;
-            height: 200px;
+            height: 220px;
             overflow: hidden;
             background: #111;
         }
@@ -721,6 +721,11 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center 20%;
+            transition: transform 0.3s ease;
+        }
+        .service-card-dark:hover .service-img-container img {
+            transform: scale(1.04);
         }
         .service-card-badge {
             position: absolute;
