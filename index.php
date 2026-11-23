@@ -486,46 +486,55 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             color: var(--text-muted);
         }
 
-        .service-mini-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-        }
-        @media (max-width: 480px) {
-            .service-mini-grid { grid-template-columns: 1fr; }
-        }
-        .service-mini-card {
-            background: var(--bg-card-inner);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+        .dash-hero-image-box {
+            position: relative;
             border-radius: var(--radius-inner);
-            padding: 0.9rem;
+            overflow: hidden;
+            height: 235px;
+            background: #0d0e17;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .dash-hero-image-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 35%;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+        .dash-hero-image-box:hover img {
+            transform: scale(1.02);
+        }
+        .dash-hero-image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.85rem 1rem;
+            background: linear-gradient(180deg, transparent 0%, rgba(7, 7, 10, 0.92) 100%);
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            justify-content: space-between;
         }
-        .service-mini-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(168, 85, 247, 0.25);
-            color: #c084fc;
-            display: flex;
+        .dash-image-tag {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            flex-shrink: 0;
+            gap: 0.4rem;
+            background: rgba(13, 14, 23, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-pill);
+            padding: 0.3rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #e2e8f0;
         }
-        .service-mini-card h4 {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 2px;
+        .dash-image-tag i {
+            color: var(--accent-purple-light);
         }
-        .service-mini-card p {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            margin: 0;
+        @media (max-width: 580px) {
+            .dash-hero-image-box { height: 195px; }
+            .dash-image-tag { font-size: 0.7rem; padding: 0.25rem 0.6rem; }
         }
 
         .dash-info-strip {
@@ -536,8 +545,16 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 0.5rem;
             font-size: 0.82rem;
             color: var(--text-secondary);
+        }
+        @media (max-width: 540px) {
+            .dash-info-strip {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.4rem;
+            }
         }
         .dash-info-strip strong { color: #fff; }
 
@@ -1053,40 +1070,14 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
 
                 <!-- Card Body -->
                 <div class="dash-content-grid">
-                    <!-- Left: Real Service Categories -->
+                    <!-- Left: Security Force Showcase -->
                     <div class="dash-main-pane">
-                        <div class="dash-welcome-text">
-                            <h2>Security Guard Options</h2>
-                            <p>Available for immediate and scheduled deployments.</p>
-                        </div>
-
-                        <div class="service-mini-grid">
-                            <div class="service-mini-card">
-                                <div class="service-mini-icon"><i class="bi bi-person-badge-fill"></i></div>
-                                <div>
-                                    <h4>VIP Bodyguard</h4>
-                                    <p>Personal close protection</p>
-                                </div>
-                            </div>
-                            <div class="service-mini-card">
-                                <div class="service-mini-icon"><i class="bi bi-building-lock"></i></div>
-                                <div>
-                                    <h4>Building & Society</h4>
-                                    <p>Gatekeeping & visitor check</p>
-                                </div>
-                            </div>
-                            <div class="service-mini-card">
-                                <div class="service-mini-icon"><i class="bi bi-shield-check"></i></div>
-                                <div>
-                                    <h4>Event Screening</h4>
-                                    <p>Metal detector screening</p>
-                                </div>
-                            </div>
-                            <div class="service-mini-card">
-                                <div class="service-mini-icon"><i class="bi bi-buildings-fill"></i></div>
-                                <div>
-                                    <h4>Corporate Force</h4>
-                                    <p>Offices & commercial parks</p>
+                        <div class="dash-hero-image-box">
+                            <img src="<?= asset('img/guards/agency-force-team.jpg') ?>" alt="Security Force Deployment Team">
+                            <div class="dash-hero-image-overlay">
+                                <div class="dash-image-tag">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>Trained Uniformed Security Force</span>
                                 </div>
                             </div>
                         </div>
@@ -1094,9 +1085,9 @@ $phoneClean = preg_replace('/\D/', '', $compPhone);
                         <div class="dash-info-strip">
                             <div>
                                 <i class="bi bi-check-circle-fill" style="color: #34d399; margin-right: 6px;"></i>
-                                <span><strong>Deployment Ready:</strong> Unarmed & licensed armed guards</span>
+                                <span><strong>Services:</strong> VIP Bodyguards · Building Security · Events · Corporate</span>
                             </div>
-                            <a href="#contact" style="color: var(--accent-purple-light); font-weight: 600;">Inquire &rarr;</a>
+                            <a href="#services" style="color: var(--accent-purple-light); font-weight: 600;">Details &rarr;</a>
                         </div>
                     </div>
 
