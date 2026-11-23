@@ -4,10 +4,16 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Redirect any main domain folder visits (/security/) to the dedicated subdomain
+    RewriteCond %{HTTP_HOST} ^(www\.)?jattamkommerce\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^(.*)$ https://security.jattamkommerce.com/$1 [L,R=301]
+
     # Force HTTPS: phone GPS (Geolocation API) only works on https://
     # Comment these 4 lines out only if SSL is not yet active on the domain.
     RewriteCond %{HTTPS} !=on
     RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
     RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 

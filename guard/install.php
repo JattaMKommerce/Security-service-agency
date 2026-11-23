@@ -4,220 +4,450 @@ $title = 'Install Guard Duty App';
 ?><!doctype html>
 <html lang="en">
 <head>
-    <?php require __DIR__ . '/_head.php'; ?>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#07070a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title><?= e($title) ?> · <?= e(company_name()) ?></title>
+    
+    <link rel="manifest" href="<?= url('guard/manifest.php') ?>">
+    <link rel="icon" href="<?= asset('img/icon.svg') ?>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="<?= asset('img/icon-192.png') ?>">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
     <style>
-        .install-wrap { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
-        .install-card { background: #ffffff; border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,.08); color: #0f172a; }
-        .step-num { width: 32px; height: 32px; border-radius: 50%; background: #0b1324; color: #f5b301; display: inline-grid; place-items: center; font-weight: 800; font-size: .95rem; flex-shrink: 0; }
-        .step-row { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
-        .step-row:last-child { margin-bottom: 0; }
-        .tab-btn { border-radius: 12px; font-weight: 600; padding: .6rem 1rem; font-size: .9rem; }
-        .tab-btn.active { background: #0b1324; color: #f5b301; }
-        .guide-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem; }
-        .benefit-pill { display: inline-flex; align-items: center; gap: .4rem; background: #ecfdf5; color: #047857; font-size: .8rem; font-weight: 600; padding: .25rem .6rem; border-radius: 999px; }
+        :root {
+            --bg-dark: #07070a;
+            --bg-card: #0e0f18;
+            --bg-card-inner: #141522;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(168, 85, 247, 0.4);
+            --accent-purple: #8b5cf6;
+            --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #a855f7 100%);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        }
+        
+        * { box-sizing: border-box; }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            margin: 0;
+            padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ambient-glow {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            max-width: 100vw;
+            height: 350px;
+            background: radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.22) 0%, rgba(124, 58, 237, 0.08) 50%, transparent 70%);
+            filter: blur(60px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: calc(0.85rem + env(safe-area-inset-top)) 1.25rem 0.85rem;
+            background: rgba(7, 7, 10, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .app-topbar a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .app-topbar a:hover { color: #fff; }
+
+        .btn-topbar-signin {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--border-subtle);
+            color: #fff;
+            padding: 0.45rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-topbar-signin:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .install-container {
+            position: relative;
+            z-index: 1;
+            max-width: 580px;
+            margin: 0 auto;
+            padding: 1.5rem 1.1rem;
+        }
+
+        /* Hero */
+        .hero-badge-wrap {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .guard-avatar-img {
+            width: 86px;
+            height: 86px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(168, 85, 247, 0.6);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.35);
+            margin-bottom: 1rem;
+        }
+        .hero-title {
+            font-size: 1.45rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.02em;
+        }
+        .hero-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .pill-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            background: rgba(168, 85, 247, 0.12);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.25);
+        }
+
+        /* Comfortable Clean Cards */
+        .clean-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 22px;
+            padding: 1.6rem;
+            margin-bottom: 1.4rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        }
+        .clean-card.featured {
+            border-color: var(--border-active);
+            background: linear-gradient(180deg, rgba(20, 21, 34, 0.9) 0%, rgba(14, 15, 24, 0.95) 100%);
+        }
+
+        .card-header-flex {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+        .card-badge-method {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 0.28rem 0.65rem;
+            border-radius: 9999px;
+            background: rgba(52, 211, 153, 0.12);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.25);
+        }
+        .card-badge-apk {
+            background: rgba(168, 85, 247, 0.12);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.25);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+            color: #fff;
+        }
+        .card-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.35rem;
+            line-height: 1.5;
+        }
+
+        /* Big Comfortable Buttons */
+        .btn-install-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.95rem 1.5rem;
+            background: var(--accent-gradient);
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 800;
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 10px 28px rgba(124, 58, 237, 0.45);
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-install-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-apk-secondary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 16px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-apk-secondary:hover {
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(168, 85, 247, 0.5);
+            color: #ffffff;
+        }
+        .btn-apk-secondary:active {
+            transform: scale(0.98);
+        }
+
+        /* Clean 3-Step Guide */
+        .steps-box {
+            background: var(--bg-card-inner);
+            border-radius: 16px;
+            padding: 1.15rem;
+            margin-top: 1.25rem;
+            border: 1px solid var(--border-subtle);
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            margin-bottom: 0.85rem;
+        }
+        .step-item:last-child { margin-bottom: 0; }
+        .step-icon-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            display: grid;
+            place-items: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .step-content {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+        .step-content strong {
+            color: #fff;
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.88rem;
+        }
+
+        /* Bottom Action */
+        .bottom-nav {
+            text-align: center;
+            margin-top: 2rem;
+            padding-bottom: 1.5rem;
+        }
+        .btn-proceed-signin {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.85rem 2rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-subtle);
+            border-radius: 9999px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-proceed-signin:hover {
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+        }
     </style>
 </head>
-<body class="g-body">
-<header class="g-top">
-    <div class="d-flex align-items-center gap-2">
-        <a href="<?= url('guard/login.php') ?>" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left"></i></a>
-        <div class="fw-bold fs-6">Guard App Installation</div>
-    </div>
-    <div class="ms-auto">
-        <a href="<?= url('guard/login.php') ?>" class="btn btn-sm btn-warning fw-bold">Sign In</a>
-    </div>
+<body>
+
+<div class="ambient-glow"></div>
+
+<header class="app-topbar">
+    <a href="<?= url('guard/login.php') ?>">
+        <i class="bi bi-arrow-left"></i>
+        <span>Guard Portal</span>
+    </a>
+    <a href="<?= url('guard/login.php') ?>" class="btn-topbar-signin">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+    </a>
 </header>
 
-<main class="install-wrap">
-    <!-- Top Hero Banner -->
-    <div class="text-center mb-4">
-        <div class="mb-3">
-            <img src="<?= asset('img/guards/hero-guard-sunglasses.jpg') ?>" alt="Officer" style="width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #f5b301; box-shadow: 0 8px 24px rgba(0,0,0,.15); display: inline-block;">
-        </div>
-        <h1 class="h4 fw-bold mb-1"><?= e(company_name()) ?></h1>
-        <p class="text-muted small">Guard & Bodyguard Duty Mobile App Installation</p>
+<main class="install-container">
+    
+    <!-- Top Hero Badge -->
+    <div class="hero-badge-wrap">
+        <img src="<?= asset('img/guards/hero-guard-sunglasses.jpg') ?>" alt="Officer" class="guard-avatar-img">
+        <h1 class="hero-title"><?= e(company_name()) ?></h1>
+        <p class="hero-subtitle">Official Guard & Bodyguard Duty App Installation</p>
         <div class="d-flex justify-content-center gap-2 flex-wrap">
-            <span class="benefit-pill"><i class="bi bi-check-circle-fill"></i> 100% Free</span>
-            <span class="benefit-pill"><i class="bi bi-geo-alt-fill"></i> Live GPS Tracking</span>
-            <span class="benefit-pill"><i class="bi bi-shield-lock-fill"></i> Instant SOS</span>
+            <span class="pill-tag"><i class="bi bi-check-circle-fill"></i> Free Install</span>
+            <span class="pill-tag"><i class="bi bi-geo-alt-fill"></i> Live GPS Duty</span>
+            <span class="pill-tag"><i class="bi bi-shield-fill-check"></i> Instant SOS</span>
         </div>
     </div>
 
-    <!-- Quick 1-Tap Install Button for Mobile Browsers -->
-    <div class="install-card border-warning border-2 bg-warning-subtle text-center">
-        <h2 class="h5 fw-bold mb-2 text-dark">Install on This Phone (1 Tap)</h2>
-        <p class="small text-muted mb-3">Install directly without opening the Google Play Store or Apple App Store.</p>
-        <button id="pwaTriggerBtn" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm">
-            <i class="bi bi-download me-2"></i> Tap to Install Guard App
+    <!-- 1. PRIMARY: 1-Tap Mobile App Install (Recommended) -->
+    <section class="clean-card featured">
+        <div class="card-header-flex">
+            <span class="card-badge-method"><i class="bi bi-lightning-charge-fill"></i> Instant WebAPK</span>
+            <span class="text-muted small"><i class="bi bi-phone me-1"></i>Android & iPhone</span>
+        </div>
+        
+        <h2 class="card-title">1-Tap Direct Install</h2>
+        <p class="card-desc">Installs directly to your home screen with zero storage overhead. Auto-updates when you start duty.</p>
+        
+        <button id="pwaTriggerBtn" class="btn-install-primary">
+            <i class="bi bi-download"></i>
+            <span>Install Guard App on Phone</span>
         </button>
-        <div id="pwaStatusText" class="small text-muted mt-2">
-            Works instantly on all Android (Chrome) and iPhone (Safari) devices.
+        <div id="pwaStatusText" class="small text-center text-muted mt-2">
+            One tap setup · Launches in standalone fullscreen
         </div>
-    </div>
 
-    <!-- Navigation Tabs for Instructions -->
-    <ul class="nav nav-pills nav-fill gap-2 mb-3" id="installTabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link tab-btn active" id="android-tab" data-bs-toggle="pill" data-bs-target="#android-pane" type="button">
-                <i class="bi bi-android2 me-1"></i> Android (Fastest)
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link tab-btn" id="ios-tab" data-bs-toggle="pill" data-bs-target="#ios-pane" type="button">
-                <i class="bi bi-apple me-1"></i> iPhone (iOS)
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link tab-btn" id="apk-tab" data-bs-toggle="pill" data-bs-target="#apk-pane" type="button">
-                <i class="bi bi-file-earmark-arrow-down me-1"></i> APK File
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="installTabsContent">
-        <!-- 1. ANDROID PWA (WebAPK) -->
-        <div class="tab-pane fade show active" id="android-pane" role="tabpanel">
-            <div class="install-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="h6 fw-bold mb-0"><i class="bi bi-android2 text-success me-1"></i> Android Installation (Chrome / Samsung Internet)</h3>
-                    <span class="badge bg-success-subtle text-success">Recommended</span>
+        <div class="steps-box mt-3">
+            <div class="step-item">
+                <div class="step-icon-circle">1</div>
+                <div class="step-content">
+                    <strong>Tap "Install Guard App"</strong>
+                    Tap the button above. If prompted by your browser, tap <strong>Install</strong> or <strong>Add</strong>.
                 </div>
-                <p class="small text-muted">Android natively installs this app as a full standalone WebAPK application directly on your phone with its own launcher icon.</p>
-                
-                <div class="guide-box">
-                    <div class="step-row">
-                        <div class="step-num">1</div>
-                        <div>
-                            <strong>Open Google Chrome</strong>
-                            <p class="small text-muted mb-0">Open Chrome on your phone and visit this duty app link.</p>
-                        </div>
-                    </div>
-                    <div class="step-row">
-                        <div class="step-num">2</div>
-                        <div>
-                            <strong>Tap Menu (3 Dots) or Install Button</strong>
-                            <p class="small text-muted mb-0">Tap the three vertical dots (<code>⋮</code>) at the top-right corner of Chrome, then select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</p>
-                        </div>
-                    </div>
-                    <div class="step-row">
-                        <div class="step-num">3</div>
-                        <div>
-                            <strong>Tap "Install"</strong>
-                            <p class="small text-muted mb-0">Android will create the <strong>Guard</strong> icon on your home screen. Tap it anytime to sign in, check in for duty, and enable live tracking!</p>
-                        </div>
-                    </div>
+            </div>
+            <div class="step-item">
+                <div class="step-icon-circle">2</div>
+                <div class="step-content">
+                    <strong>For iPhone / Safari:</strong>
+                    Tap Safari's <strong>Share</strong> button (<i class="bi bi-box-arrow-up"></i>) at the bottom $\rightarrow$ choose <strong>"Add to Home Screen"</strong>.
                 </div>
-
-                <div class="alert alert-info py-2 small mt-3 mb-0">
-                    <i class="bi bi-info-circle me-1"></i> <strong>Automatic Updates:</strong> Whenever the agency updates assignments or features on Hostinger, the app updates automatically without needing manual reinstall.
+            </div>
+            <div class="step-item">
+                <div class="step-icon-circle">3</div>
+                <div class="step-content">
+                    <strong>Open & Start Duty</strong>
+                    Launch the app from your home screen and sign in with your Badge ID or Phone.
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- 2. IPHONE (iOS Safari) -->
-        <div class="tab-pane fade" id="ios-pane" role="tabpanel">
-            <div class="install-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="h6 fw-bold mb-0"><i class="bi bi-apple text-dark me-1"></i> iPhone & iPad Installation (Safari)</h3>
-                    <span class="badge bg-secondary-subtle text-secondary">Apple iOS</span>
-                </div>
-                <p class="small text-muted">On Apple devices, Apple Safari installs the app directly to your home screen.</p>
-                
-                <div class="guide-box">
-                    <div class="step-row">
-                        <div class="step-num">1</div>
-                        <div>
-                            <strong>Open in Safari</strong>
-                            <p class="small text-muted mb-0">Open Safari browser on your iPhone and navigate to this link.</p>
-                        </div>
-                    </div>
-                    <div class="step-row">
-                        <div class="step-num">2</div>
-                        <div>
-                            <strong>Tap the Share Button</strong>
-                            <p class="small text-muted mb-0">Tap the <strong>Share</strong> icon (the square with an arrow pointing up <i class="bi bi-box-arrow-up"></i>) at the bottom toolbar.</p>
-                        </div>
-                    </div>
-                    <div class="step-row">
-                        <div class="step-num">3</div>
-                        <div>
-                            <strong>Choose "Add to Home Screen"</strong>
-                            <p class="small text-muted mb-0">Scroll down and tap <strong>"Add to Home Screen"</strong> <i class="bi bi-plus-square"></i>, then tap <strong>"Add"</strong> at the top right.</p>
-                        </div>
-                    </div>
-                </div>
+    <!-- 2. SEGREGATED: Direct Android APK Package -->
+    <section class="clean-card">
+        <div class="card-header-flex">
+            <span class="card-badge-method card-badge-apk"><i class="bi bi-android2"></i> Standalone APK</span>
+            <span class="text-muted small">v1.0.0 · 1.3 MB</span>
+        </div>
 
-                <div class="alert alert-secondary py-2 small mt-3 mb-0">
-                    <i class="bi bi-apple me-1"></i> The Guard app icon will appear alongside your normal iPhone apps.
+        <h2 class="card-title">Download Android APK File</h2>
+        <p class="card-desc">Prefer a direct sideloadable file? Download the standalone signed APK package for any Android device.</p>
+
+        <a href="<?= url('downloads/apk/Jatta-Security-Guard.apk') ?>" class="btn-apk-secondary" download="Jatta-Security-Guard.apk">
+            <i class="bi bi-file-earmark-arrow-down-fill text-purple"></i>
+            <span>Download Jatta-Security-Guard.apk</span>
+        </a>
+
+        <div class="steps-box mt-3">
+            <div class="step-item">
+                <div class="step-icon-circle">1</div>
+                <div class="step-content">
+                    <strong>Download & Open</strong>
+                    Tap the button above. When the file finishes downloading, tap to open it.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-icon-circle">2</div>
+                <div class="step-content">
+                    <strong>Allow Installation</strong>
+                    If Android asks to allow installing unknown apps, tap <strong>Settings</strong> $\rightarrow$ toggle <strong>"Allow from this source"</strong>.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-icon-circle">3</div>
+                <div class="step-content">
+                    <strong>Complete Installation</strong>
+                    Tap <strong>Install</strong>. Once installed, tap <strong>Open</strong> to begin duty.
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- 3. RAW APK DOWNLOAD -->
-        <div class="tab-pane fade" id="apk-pane" role="tabpanel">
-            <div class="install-card">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="h6 fw-bold mb-0"><i class="bi bi-file-earmark-arrow-down-fill text-warning me-1"></i> Direct APK File (.apk)</h3>
-                    <span class="badge bg-warning-subtle text-warning">Android Sideload</span>
-                </div>
-                <p class="small text-muted">For devices without Google Chrome or for distributing the installer directly over WhatsApp or Bluetooth.</p>
+    <!-- 3. SUPERVISOR / DESK QR CODE -->
+    <section class="clean-card text-center">
+        <h3 class="card-title fs-6 mb-1">Supervisor Onboarding QR Code</h3>
+        <p class="card-desc mb-3">Point any guard's phone camera at this QR code to open the app setup instantly.</p>
+        <div id="installQrCanvas" class="d-inline-block p-3 bg-white rounded-3 shadow-sm mb-2"></div>
+        <div class="small fw-semibold mt-2" style="color: var(--accent-purple);"><?= e(url('guard/install.php')) ?></div>
+    </section>
 
-                <div class="d-grid gap-2 mb-3">
-                    <a href="<?= url('downloads/guard-duty-app.apk') ?>" class="btn btn-navy btn-lg fw-bold" download>
-                        <i class="bi bi-download me-2"></i> Download Guard APK (.apk)
-                    </a>
-                </div>
-
-                <div class="guide-box">
-                    <h4 class="small fw-bold text-uppercase text-muted mb-2">How to install the downloaded APK:</h4>
-                    <div class="step-row">
-                        <div class="step-num">1</div>
-                        <div>
-                            <strong>Download the APK file</strong>
-                            <p class="small text-muted mb-0">Tap the button above. If Chrome warns <em>"File might be harmful"</em>, tap <strong>"Download anyway"</strong>.</p>
-                        </div>
-                    </div>
-                    <div class="step-row">
-                        <div class="step-num">2</div>
-                        <div>
-                            <strong>Allow installation</strong>
-                            <p class="small text-muted mb-0">Open the file. If Android prompts <em>"For your security, your phone is not allowed to install unknown apps"</em>, tap <strong>Settings</strong> and turn ON <strong>"Allow from this source"</strong>.</p>
-                        </div>
-                    </div>
-                    <div class="step-row">
-                        <div class="step-num">3</div>
-                        <div>
-                            <strong>Tap "Install"</strong>
-                            <p class="small text-muted mb-0">Tap Install. Once complete, open the app and log in with your Employee ID.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3 p-3 bg-light rounded-3 small">
-                    <strong>For Agency IT / Administrators:</strong>
-                    <p class="text-muted mb-1 mt-1">You can build a signed production APK or Google Play Store bundle for Hostinger in 1 minute using the official Google-backed PWA tool <strong>PWABuilder</strong> (<a href="https://www.pwabuilder.com" target="_blank" rel="noopener">pwabuilder.com</a>). Simply enter your Hostinger domain URL, click <em>Package for Android</em>, and upload the generated APK to your <code>/downloads/</code> folder.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Onboarding QR Code for Desk / Supervisor -->
-    <div class="install-card text-center">
-        <h3 class="h6 fw-bold mb-2">Scan QR Code to Open on Phone</h3>
-        <p class="small text-muted mb-3">Point any phone camera to instantly open the Guard Duty App on that phone.</p>
-        <div id="installQrCanvas" class="d-inline-block p-2 bg-white rounded border shadow-sm mb-2"></div>
-        <div class="small fw-semibold text-primary mt-1"><?= e(url('guard/login.php')) ?></div>
-    </div>
-
-    <!-- Back to Login -->
-    <div class="text-center mt-3">
-        <a href="<?= url('guard/login.php') ?>" class="btn btn-warning btn-lg px-4 fw-bold">
-            <i class="bi bi-box-arrow-in-right me-1"></i> Proceed to Guard Login
+    <!-- Bottom Action -->
+    <div class="bottom-nav">
+        <a href="<?= url('guard/login.php') ?>" class="btn-proceed-signin">
+            <span>Proceed to Guard Login</span>
+            <i class="bi bi-arrow-right"></i>
         </a>
     </div>
+
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= asset('js/qrcode.min.js') ?>"></script>
 <script>
 // PWA installation trigger
@@ -228,10 +458,6 @@ const pwaText = document.getElementById('pwaStatusText');
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     pwaPrompt = e;
-    if (pwaBtn) {
-        pwaBtn.classList.remove('btn-outline-warning');
-        pwaBtn.classList.add('btn-warning');
-    }
 });
 
 if (pwaBtn) {
@@ -241,17 +467,14 @@ if (pwaBtn) {
             const { outcome } = await pwaPrompt.userChoice;
             pwaPrompt = null;
             if (outcome === 'accepted' && pwaText) {
-                pwaText.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> App installed successfully! Check your phone home screen.</span>';
+                pwaText.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> App installed! Check your home screen.</span>';
             }
         } else {
-            // Check if iOS
             const isIos = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             if (isIos) {
-                const iosTab = new bootstrap.Tab(document.getElementById('ios-tab'));
-                iosTab.show();
-                alert('On iPhone: Tap the Share button at the bottom of Safari, then tap "Add to Home Screen".');
+                alert('On iPhone: Tap the Share button at the bottom of Safari, then choose "Add to Home Screen".');
             } else {
-                alert('To install on Android: Tap the 3 dots (⋮) in Chrome, then tap "Install app" or "Add to Home screen".');
+                alert('On Android: Tap the 3 dots (⋮) in Chrome, then tap "Install app" or "Add to Home screen".');
             }
         }
     });
@@ -259,10 +482,10 @@ if (pwaBtn) {
 
 // Generate QR Code
 new QRCode(document.getElementById("installQrCanvas"), {
-    text: <?= json_encode(url('guard/login.php')) ?>,
-    width: 150,
-    height: 150,
-    colorDark : "#0b1324",
+    text: <?= json_encode(url('guard/install.php')) ?>,
+    width: 140,
+    height: 140,
+    colorDark : "#07070a",
     colorLight : "#ffffff",
     correctLevel : QRCode.CorrectLevel.M
 });

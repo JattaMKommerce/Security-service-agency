@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.jattamkommerce.security.guard",
+        "sha256_cert_fingerprints": ["29:32:8D:1C:06:55:CC:B2:1A:20:82:73:72:D8:22:EE:3C:C0:2C:06:4C:45:E8:1F:70:31:31:D9:69:6E:AB:B8"]
+      }
+    }]
