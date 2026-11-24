@@ -1,4 +1,4 @@
-/* Admin portal: shared behaviour (sidebar, confirmations, live alert polling) */
+/* Admin portal: shared behaviour (sidebar, confirmations, live alert polling & 2-way emergency siren) */
 (function () {
     'use strict';
     const APP = window.APP || {};
@@ -34,24 +34,74 @@
         t.show();
     };
 
+    // ---- Two-Way Audible Emergency Siren Alert ----
     let audioCtx = null;
-    APP.beep = function (urgent) {
+    function getAudioContext() {
+        if (!audioCtx) {
+            const AudioC = window.AudioContext || window.webkitAudioContext;
+            if (AudioC) audioCtx = new AudioC();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+        return audioCtx;
+    }
+
+    // Pre-unlock audio on user gesture so emergency siren can sound immediately
+    function unlockAudio() {
+        getAudioContext();
+    }
+    ['click', 'keydown', 'pointerdown', 'touchstart'].forEach((ev) => {
+        document.addEventListener(ev, unlockAudio, { passive: true });
+    });
+
+    APP.playSosAlarm = function () {
         try {
-            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-            const pattern = urgent ? [0, 0.25, 0.5, 0.75] : [0];
-            pattern.forEach((t) => {
-                const o = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                o.type = 'square';
-                o.frequency.value = urgent ? 880 : 660;
-                g.gain.setValueAtTime(0.0001, audioCtx.currentTime + t);
-                g.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + t + 0.02);
-                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + t + 0.2);
-                o.connect(g).connect(audioCtx.destination);
-                o.start(audioCtx.currentTime + t);
-                o.stop(audioCtx.currentTime + t + 0.22);
-            });
-        } catch (e) { /* audio not allowed yet */ }
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            if (ctx.state === 'suspended') ctx.resume();
+            const now = ctx.currentTime;
+            // 8 rapid sweeping siren pulses (2-way emergency siren)
+            for (let i = 0; i < 8; i++) {
+                const t = now + (i * 0.35);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(750, t);
+                osc.frequency.exponentialRampToValueAtTime(1600, t + 0.22);
+                gain.gain.setValueAtTime(0.9, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.32);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.34);
+            }
+        } catch (e) {
+            console.warn('SOS alarm audio playback failed:', e);
+        }
+    };
+
+    APP.beep = function (urgent) {
+        if (urgent) {
+            APP.playSosAlarm();
+            return;
+        }
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            if (ctx.state === 'suspended') ctx.resume();
+            const t = ctx.currentTime;
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.value = 660;
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+            o.connect(g).connect(ctx.destination);
+            o.start(t);
+            o.stop(t + 0.22);
+        } catch (e) { }
     };
 
     // ---- Sidebar (mobile) ----
@@ -70,7 +120,7 @@
     // ---- Live alerts ----
     const KEY = 'sa_last_alert_id';
     const typeMeta = {
-        sos: { icon: 'bi-exclamation-octagon-fill', cls: 'tint-red', title: 'SOS' },
+        sos: { icon: 'bi-exclamation-octagon-fill', cls: 'tint-red', title: 'SOS EMERGENCY' },
         geofence_exit: { icon: 'bi-sign-turn-right-fill', cls: 'tint-amber', title: 'Left site' }
     };
 
@@ -80,7 +130,7 @@
         if (!list.length) { box.innerHTML = '<div class="p-4 text-center small text-muted"><i class="bi bi-check2-circle fs-4 d-block mb-1"></i>No open alerts</div>'; return; }
         box.innerHTML = list.map((a) => {
             const m = typeMeta[a.type] || typeMeta.sos;
-            return '<a class="alert-menu-item" href="' + APP.url('admin/alerts.php?id=' + a.id) + '">' +
+            return '<a class="alert-menu-item' + (a.type === 'sos' ? ' bg-danger-subtle' : '') + '" href="' + APP.url('admin/alerts.php?id=' + a.id) + '">' +
                 '<span class="ico ' + m.cls + '"><i class="bi ' + m.icon + '"></i></span>' +
                 '<span class="min-w-0"><strong>' + m.title + ' · ' + APP.esc(a.guard_name) + '</strong>' +
                 '<span class="d-block small text-muted text-truncate">' + APP.esc(a.client_name || 'No client') + ' · ' + APP.esc(a.ago) + '</span></span></a>';
@@ -94,30 +144,62 @@
         });
     }
 
+    function triggerSosBanner(guardName, alertId) {
+        // High visibility audio prompt and response link
+        APP.toast(
+            '<div class="d-flex align-items-center gap-2">' +
+            '<i class="bi bi-exclamation-octagon-fill fs-3 text-warning"></i>' +
+            '<div><strong class="d-block fs-6">🚨 SOS FROM ' + APP.esc(guardName).toUpperCase() + '</strong>' +
+            '<div class="small">Tap to hear siren & respond immediately!</div></div></div>' +
+            '<a class="btn btn-warning btn-sm w-100 mt-2 fw-bold" onclick="APP.playSosAlarm()" href="' + APP.url('admin/alerts.php?id=' + alertId) + '">RESPOND TO SOS →</a>',
+            'danger', 0
+        );
+    }
+
     let first = true;
     let memLast = null;
     async function poll() {
         try {
-            // null = first poll in this browser tab session: only remember the latest id.
             let last = memLast;
             try { const s = sessionStorage.getItem(KEY); if (s !== null) last = parseInt(s, 10) || 0; } catch (e) { }
             const data = await APP.api('api/admin/alerts_poll.php' + (last !== null ? '?since_id=' + last : ''));
             setCount(data.open_count);
             renderAlertMenu(data.open);
+
             const newLast = Math.max(last || 0, data.max_id || 0);
             memLast = newLast;
             try { sessionStorage.setItem(KEY, String(newLast)); } catch (e) { }
-            if (last !== null && data.new.length) {
-                const urgent = data.new.some((a) => a.type === 'sos');
+
+            // Check if any open SOS needs alerting (e.g. fresh page load with active SOS)
+            const openSos = (data.open || []).filter((a) => a.type === 'sos' && a.status === 'open');
+            openSos.forEach((s) => {
+                const sKey = 'sa_sos_alerted_' + s.id;
+                let alreadyAlerted = false;
+                try { alreadyAlerted = sessionStorage.getItem(sKey) === '1'; } catch (e) { }
+                if (!alreadyAlerted) {
+                    try { sessionStorage.setItem(sKey, '1'); } catch (e) { }
+                    APP.playSosAlarm();
+                    triggerSosBanner(s.guard_name, s.id);
+                    document.getElementById('alertBell')?.classList.add('bell-ring');
+                }
+            });
+
+            // Process newly arrived alerts from this polling cycle
+            if (last !== null && data.new && data.new.length) {
+                const hasSos = data.new.some((a) => a.type === 'sos');
                 data.new.forEach((a) => {
                     const m = typeMeta[a.type] || typeMeta.sos;
-                    APP.toast('<strong><i class="bi ' + m.icon + ' me-1"></i>' + m.title + ': ' + APP.esc(a.guard_name) + '</strong><br>' +
-                        APP.esc(a.message || '') + '<br><a class="text-white fw-semibold" href="' + APP.url('admin/alerts.php?id=' + a.id) + '">Open alert →</a>',
-                        a.type === 'sos' ? 'danger' : 'warning', a.type === 'sos' ? 0 : 10000);
+                    if (a.type === 'sos') {
+                        triggerSosBanner(a.guard_name, a.id);
+                    } else {
+                        APP.toast('<strong><i class="bi ' + m.icon + ' me-1"></i>' + m.title + ': ' + APP.esc(a.guard_name) + '</strong><br>' +
+                            APP.esc(a.message || '') + '<br><a class="text-white fw-semibold" href="' + APP.url('admin/alerts.php?id=' + a.id) + '">Open alert →</a>',
+                            'warning', 10000);
+                    }
                 });
-                APP.beep(urgent);
+                APP.beep(hasSos);
                 document.getElementById('alertBell')?.classList.add('bell-ring');
-                setTimeout(() => document.getElementById('alertBell')?.classList.remove('bell-ring'), 3000);
+                setTimeout(() => document.getElementById('alertBell')?.classList.remove('bell-ring'), 4000);
                 document.dispatchEvent(new CustomEvent('app:new-alerts', { detail: data.new }));
             }
         } catch (e) {
@@ -125,9 +207,11 @@
         }
         first = false;
     }
+
     if (document.getElementById('alertBell')) {
         poll();
-        setInterval(poll, 12000);
+        // High frequency 4-second poll for rapid emergency detection
+        setInterval(poll, 4000);
     }
 
     window.APP = APP;
