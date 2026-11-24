@@ -50,6 +50,13 @@ $pageScripts = ['js/tracking.js'];
 require APP_ROOT . '/includes/layout/header.php';
 ?>
 
+<div class="guard-hero-banner">
+    <div>
+        <h1 class="guard-hero-title">Command Center</h1>
+        <p class="guard-hero-sub">Real-time fleet monitoring, live duty tracking and operations overview</p>
+    </div>
+</div>
+
 <?php foreach ($sos as $s): ?>
     <a href="<?= url('admin/alerts.php?id=' . $s['id']) ?>" class="sos-banner mb-3 text-white">
         <i class="bi bi-exclamation-octagon-fill fs-4"></i>
@@ -59,7 +66,7 @@ require APP_ROOT . '/includes/layout/header.php';
     </a>
 <?php endforeach; ?>
 
-<div class="row g-3 mb-3">
+<div class="row g-2 mb-3">
     <?php
     $cards = [
         ['Total Bodyguards', $stats['guards'], 'bi-people-fill', 'tint-blue', 'admin/guards.php'],
@@ -70,10 +77,11 @@ require APP_ROOT . '/includes/layout/header.php';
         ['Open Alerts', $stats['open_alerts'], 'bi-exclamation-triangle-fill', 'tint-red', 'admin/alerts.php'],
     ];
     foreach ($cards as [$lbl, $val, $icon, $tint, $href]): ?>
-        <div class="col-6 col-md-4 col-xl-2">
-            <a href="<?= url($href) ?>" class="card stat-card text-reset">
-                <span class="stat-icon <?= $tint ?>"><i class="bi <?= $icon ?>"></i></span>
-                <div><div class="stat-value"><?= $val ?></div><div class="stat-label"><?= e($lbl) ?></div></div>
+        <div class="col-4 col-md-4 col-xl-2">
+            <a href="<?= url($href) ?>" class="stat-box-modern text-decoration-none h-100">
+                <span class="stat-icon <?= $tint ?>" style="width:32px;height:32px;font-size:0.9rem;border-radius:10px;margin-bottom:0.25rem"><i class="bi <?= $icon ?>"></i></span>
+                <div class="stat-box-num"><?= $val ?></div>
+                <div class="stat-box-lbl text-truncate" style="max-width:100%"><?= e($lbl) ?></div>
             </a>
         </div>
     <?php endforeach; ?>
@@ -87,7 +95,7 @@ require APP_ROOT . '/includes/layout/header.php';
                 <span class="small text-muted ms-2">updated <span data-live-updated>—</span></span>
                 <a href="<?= url('admin/tracking.php') ?>" class="btn btn-sm btn-outline-primary ms-auto">Full screen tracking</a>
             </div>
-            <div class="card-body p-0"><div id="dashMap" style="height:420px"></div></div>
+            <div class="card-body p-0"><div id="dashMap" class="dash-map-responsive"></div></div>
             <div class="card-footer bg-white small d-flex flex-wrap gap-3">
                 <span><span class="status-dot" style="background:#16a34a"></span>Live <strong data-count="on_duty">0</strong></span>
                 <span><span class="status-dot" style="background:#ca8a04"></span>No signal <strong data-count="offline_duty">0</strong></span>
@@ -129,9 +137,28 @@ require APP_ROOT . '/includes/layout/header.php';
     </div>
     <div class="col-lg-5">
         <div class="card table-card h-100">
-            <div class="card-header d-flex"><span>Clients with most guards hired</span><a class="ms-auto small" href="<?= url('admin/assignments.php') ?>">All deployments</a></div>
-            <div class="table-responsive">
-                <table class="table table-hover">
+            <div class="card-header d-flex align-items-center"><span>Clients with most guards hired</span><a class="ms-auto small" href="<?= url('admin/assignments.php') ?>">All deployments</a></div>
+            <!-- Mobile View -->
+            <div class="d-md-none p-2">
+                <?php if (!$topClients): ?>
+                    <div class="text-center text-muted py-4 small">No guards hired yet</div>
+                <?php endif; ?>
+                <?php foreach ($topClients as $c): ?>
+                    <a href="<?= url('admin/client_view.php?id=' . $c['id']) ?>" class="d-flex align-items-center justify-content-between p-2 mb-2 bg-light rounded text-decoration-none">
+                        <div class="min-w-0 me-2">
+                            <strong class="text-dark d-block text-truncate" style="font-size:0.85rem;"><?= e($c['name']) ?></strong>
+                            <span class="small text-muted"><?= e($c['client_code']) ?></span>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <span class="badge bg-primary me-1"><?= (int)$c['guards'] ?> Hired</span>
+                            <span class="badge bg-success"><?= (int)$c['on_duty'] ?> Duty</span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
+                <table class="table table-hover mb-0">
                     <thead><tr><th>Client</th><th class="text-end">Hired</th><th class="text-end">On duty</th></tr></thead>
                     <tbody>
                     <?php if (!$topClients): ?><tr><td colspan="3" class="text-center text-muted py-4">No guards hired yet</td></tr><?php endif; ?>

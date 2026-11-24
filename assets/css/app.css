@@ -638,7 +638,9 @@ html, body {
     body.admin-body { background: #fff; }
     .card { border: none; box-shadow: none; }
 }
+.dash-map-responsive { height: 420px; }
 @media (max-width: 575.98px) {
+    .dash-map-responsive { height: 260px; }
     .legend { font-size: .66rem; line-height: 1.45; padding: .35rem .5rem; }
     .kv { grid-template-columns: 110px 1fr; }
 }

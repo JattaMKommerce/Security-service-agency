@@ -45,11 +45,67 @@ if (in_array($type, ['sos', 'geofence_exit'], true)) { $where[] = 'al.type = ?';
 $p = paginate('FROM alerts al JOIN guards g ON g.id = al.guard_id LEFT JOIN clients c ON c.id = al.client_id WHERE ' . implode(' AND ', $where),
     $params, 'al.*, g.full_name, g.employee_code, c.name AS client_name', "(al.status = 'open') DESC, al.id DESC", 30);
 
+$alertStats = q_one("SELECT
+    COUNT(*) total,
+    COALESCE(SUM(status <> 'resolved'), 0) unresolved_cnt,
+    COALESCE(SUM(type = 'sos' AND status <> 'resolved'), 0) sos_cnt,
+    COALESCE(SUM(type = 'geofence_exit' AND status <> 'resolved'), 0) geo_cnt,
+    COALESCE(SUM(status = 'resolved'), 0) resolved_cnt
+FROM alerts");
+
 $pageTitle = 'Alerts';
 $activeNav = 'alerts';
 $useMap = (bool)$detail;
 require APP_ROOT . '/includes/layout/header.php';
 ?>
+
+<!-- 1. Hero Banner (Clean SaaS Look) -->
+<div class="guard-hero-banner mb-3">
+    <div class="guard-hero-content">
+        <h2 class="guard-hero-title">Security &amp; SOS Alerts</h2>
+        <p class="guard-hero-sub">Emergency panic signals, duty perimeter geofence exits, and incident response</p>
+    </div>
+    <div class="guard-hero-graphic d-none d-sm-block text-end pe-3" style="font-size:3.5rem;color:rgba(220,38,38,0.2);">
+        <i class="bi bi-exclamation-octagon-fill"></i>
+    </div>
+</div>
+
+<!-- 2. Summary Statistics Section (4 Clean Cards) -->
+<div class="stat-grid-4">
+    <!-- Unresolved -->
+    <a href="?status=unresolved" class="stat-box-modern text-decoration-none">
+        <div class="stat-box-icon text-danger bg-danger-subtle">
+            <i class="bi bi-bell-fill"></i>
+        </div>
+        <div class="stat-box-num"><?= (int)$alertStats['unresolved_cnt'] ?></div>
+        <div class="stat-box-lbl">Unresolved</div>
+    </a>
+    <!-- SOS Alarms -->
+    <a href="?status=unresolved&type=sos" class="stat-box-modern text-decoration-none">
+        <div class="stat-box-icon text-danger" style="background:rgba(220,38,38,0.18);">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+        </div>
+        <div class="stat-box-num text-danger"><?= (int)$alertStats['sos_cnt'] ?></div>
+        <div class="stat-box-lbl">SOS Alarms</div>
+    </a>
+    <!-- Left Site -->
+    <a href="?status=unresolved&type=geofence_exit" class="stat-box-modern text-decoration-none">
+        <div class="stat-box-icon text-warning bg-warning-subtle">
+            <i class="bi bi-sign-turn-right-fill"></i>
+        </div>
+        <div class="stat-box-num"><?= (int)$alertStats['geo_cnt'] ?></div>
+        <div class="stat-box-lbl">Left Site</div>
+    </a>
+    <!-- Resolved -->
+    <a href="?status=resolved" class="stat-box-modern text-decoration-none">
+        <div class="stat-box-icon text-success bg-success-subtle">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div class="stat-box-num"><?= (int)$alertStats['resolved_cnt'] ?></div>
+        <div class="stat-box-lbl">Resolved</div>
+    </a>
+</div>
+
 <?php if ($detail): $isSos = $detail['type'] === 'sos'; ?>
 <div class="card mb-3 border-<?= $isSos ? 'danger' : 'warning' ?>">
     <div class="card-header d-flex align-items-center gap-2 <?= $isSos && $detail['status'] !== 'resolved' ? 'text-bg-danger' : '' ?>">
@@ -94,25 +150,97 @@ require APP_ROOT . '/includes/layout/header.php';
 </div>
 <?php endif; ?>
 
-<div class="page-actions">
-    <ul class="nav nav-tabs border-0">
-        <?php foreach (['unresolved' => 'Unresolved', 'resolved' => 'Resolved', 'all' => 'All'] as $k => $lbl): ?>
-            <li class="nav-item"><a class="nav-link<?= $status === $k ? ' active' : '' ?>" href="?status=<?= $k ?>&type=<?= e($type) ?>"><?= $lbl ?></a></li>
-        <?php endforeach; ?>
-    </ul>
-    <div class="btn-group btn-group-sm">
-        <a href="?status=<?= e($status) ?>" class="btn btn-outline-secondary<?= $type === '' ? ' active' : '' ?>">All types</a>
-        <a href="?status=<?= e($status) ?>&type=sos" class="btn btn-outline-danger<?= $type === 'sos' ? ' active' : '' ?>">SOS</a>
-        <a href="?status=<?= e($status) ?>&type=geofence_exit" class="btn btn-outline-warning<?= $type === 'geofence_exit' ? ' active' : '' ?>">Left site</a>
+<!-- 3. Clean Filter Tabs & Status Pills -->
+<div class="filter-card-clean mb-3 p-2">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex gap-1 flex-wrap">
+            <?php foreach (['unresolved' => 'Unresolved', 'resolved' => 'Resolved', 'all' => 'All'] as $k => $lbl): ?>
+                <a class="btn btn-sm <?= $status === $k ? 'btn-primary' : 'btn-light border' ?> rounded-pill px-3 py-1" href="?status=<?= $k ?>&type=<?= e($type) ?>">
+                    <?= $lbl ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <div class="btn-group btn-group-sm">
+            <a href="?status=<?= e($status) ?>" class="btn <?= $type === '' ? 'btn-secondary text-white' : 'btn-outline-secondary' ?>">All</a>
+            <a href="?status=<?= e($status) ?>&type=sos" class="btn <?= $type === 'sos' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">SOS</a>
+            <a href="?status=<?= e($status) ?>&type=geofence_exit" class="btn <?= $type === 'geofence_exit' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Left site</a>
+        </div>
     </div>
 </div>
 
-<div class="card table-card">
+<!-- 4. Section Header -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="fs-5 fw-bold m-0 text-dark">Alert Records (<?= (int)$p['total'] ?>)</h2>
+</div>
+
+<!-- 5. MOBILE ALERT CARDS (Visible only on mobile devices) -->
+<div class="d-md-none">
+    <?php if (!$p['rows']): ?>
+        <div class="empty-state bg-white rounded-4 border p-4 mb-3 text-center">
+            <i class="bi bi-shield-check fs-2 text-success mb-2 d-block"></i>
+            <div class="fw-semibold text-dark">No alerts found</div>
+            <div class="small text-muted">All posts are normal and secure.</div>
+        </div>
+    <?php endif; ?>
+
+    <?php foreach ($p['rows'] as $a):
+        $isSosAlert = $a['type'] === 'sos';
+    ?>
+        <div class="guard-mobile-card mb-2" style="<?= $a['status'] === 'open' && $isSosAlert ? 'border-color:#fca5a5;background:#fff5f5;' : '' ?>">
+            <div class="d-flex align-items-center gap-3">
+                <!-- Icon -->
+                <div class="flex-shrink-0">
+                    <span class="guard-avatar-initials-sm" style="background:<?= $isSosAlert ? '#dc2626' : '#d97706' ?>;font-size:1.2rem;">
+                        <i class="bi <?= $isSosAlert ? 'bi-exclamation-octagon-fill' : 'bi-sign-turn-right-fill' ?>"></i>
+                    </span>
+                </div>
+
+                <!-- Middle Content -->
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <strong class="text-truncate text-dark" style="font-size:0.92rem;"><?= e($a['full_name']) ?></strong>
+                        <?= status_badge($a['status']) ?>
+                    </div>
+                    <div class="small text-muted text-truncate">
+                        <?= e($a['employee_code']) ?><?= $a['client_name'] ? ' · ' . e($a['client_name']) : '' ?>
+                    </div>
+                    <div class="small fw-semibold text-truncate mt-1 <?= $isSosAlert ? 'text-danger' : 'text-dark' ?>">
+                        <?= e($a['message'] ?: ($isSosAlert ? 'SOS panic alert triggered' : 'Left assigned post')) ?>
+                    </div>
+                    <div class="small text-muted mt-1" style="font-size:0.72rem;">
+                        <i class="bi bi-clock me-1"></i><?= e(time_ago($a['created_at'])) ?> (<?= e(fmt_datetime($a['created_at'])) ?>)
+                    </div>
+                </div>
+
+                <!-- Right Side: Open Link -->
+                <a href="<?= url('admin/alerts.php?id=' . $a['id'] . '&status=' . urlencode($status)) ?>" class="btn btn-sm <?= $isSosAlert && $a['status'] === 'open' ? 'btn-danger' : 'btn-outline-primary' ?> rounded-pill px-3 py-1 flex-shrink-0 shadow-sm" style="font-size:0.75rem;">
+                    View
+                </a>
+            </div>
+        </div>
+    <?php endforeach; ?>
+    <?= pagination_links($p) ?>
+</div>
+
+<!-- 6. DESKTOP TABLE (Visible on tablets and desktop screens) -->
+<div class="card table-card d-none d-md-block mb-3">
     <div class="table-responsive">
-        <table class="table table-hover">
-            <thead><tr><th>Type</th><th>Bodyguard</th><th>Client</th><th>Details</th><th>Raised</th><th>Status</th><th></th></tr></thead>
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Bodyguard</th>
+                    <th>Client</th>
+                    <th>Details</th>
+                    <th>Raised</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
             <tbody>
-            <?php if (!$p['rows']): ?><tr><td colspan="7"><div class="empty-state"><i class="bi bi-shield-check"></i>No alerts here</div></td></tr><?php endif; ?>
+            <?php if (!$p['rows']): ?>
+                <tr><td colspan="7"><div class="empty-state"><i class="bi bi-shield-check"></i>No alerts here</div></td></tr>
+            <?php endif; ?>
             <?php foreach ($p['rows'] as $a): ?>
                 <tr class="<?= $a['status'] === 'open' && $a['type'] === 'sos' ? 'table-danger' : '' ?>">
                     <td><?= status_badge($a['type']) ?></td>

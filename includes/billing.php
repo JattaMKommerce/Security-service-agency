@@ -87,3 +87,102 @@ function invoice_totals(array $items, float $taxPercent, float $discount): array
     $tax = round($taxable * $taxPercent / 100, 2);
     return ['subtotal' => round($subtotal, 2), 'discount' => round($discount, 2), 'tax_amount' => $tax, 'total' => round($taxable + $tax, 2)];
 }
+
+/**
+ * Converts Indian Rupee amounts into Words (crores, lakhs, thousands, hundreds)
+ * per RBI / Indian statutory accounting standards.
+ */
+function amount_in_words(float $amount): string
+{
+    $amount = round($amount, 2);
+    $rupees = (int)floor($amount);
+    $paise = (int)round(($amount - $rupees) * 100);
+
+    $words = [
+        0 => '', 1 => 'One', 2 => 'Two', 3 => 'Three', 4 => 'Four', 5 => 'Five',
+        6 => 'Six', 7 => 'Seven', 8 => 'Eight', 9 => 'Nine', 10 => 'Ten',
+        11 => 'Eleven', 12 => 'Twelve', 13 => 'Thirteen', 14 => 'Fourteen', 15 => 'Fifteen',
+        16 => 'Sixteen', 17 => 'Seventeen', 18 => 'Eighteen', 19 => 'Nineteen', 20 => 'Twenty',
+        30 => 'Thirty', 40 => 'Forty', 50 => 'Fifty', 60 => 'Sixty', 70 => 'Seventy',
+        80 => 'Eighty', 90 => 'Ninety'
+    ];
+
+    $convertChunk = function(int $num) use (&$convertChunk, $words): string {
+        if ($num === 0) return '';
+        if ($num < 20) return trim($words[$num]) . ' ';
+        if ($num < 100) return trim($words[(int)floor($num / 10) * 10] . ' ' . $words[$num % 10]) . ' ';
+        return trim($words[(int)floor($num / 100)]) . ' Hundred ' . $convertChunk($num % 100);
+    };
+
+    if ($rupees === 0) {
+        $str = 'Rupees Zero';
+    } else {
+        $crores = (int)floor($rupees / 10000000);
+        $rupees %= 10000000;
+        $lakhs = (int)floor($rupees / 100000);
+        $rupees %= 100000;
+        $thousands = (int)floor($rupees / 1000);
+        $rupees %= 1000;
+        $remaining = $rupees;
+
+        $parts = [];
+        if ($crores > 0) $parts[] = trim($convertChunk($crores)) . ' Crore';
+        if ($lakhs > 0) $parts[] = trim($convertChunk($lakhs)) . ' Lakh';
+        if ($thousands > 0) $parts[] = trim($convertChunk($thousands)) . ' Thousand';
+        if ($remaining > 0) $parts[] = trim($convertChunk($remaining));
+
+        $str = 'Rupees ' . trim(implode(' ', array_filter($parts)));
+    }
+
+    if ($paise > 0) {
+        $str .= ' and ' . trim($convertChunk($paise)) . ' Paise';
+    }
+    return $str . ' Only';
+}
+
+/**
+ * Returns official RBI & GST statutory details for security service invoicing.
+ */
+function rbi_bank_details(): array
+{
+    $companyName = setting('company_name', 'Jatta Security Agency');
+    $gstin = setting('company_gstin') ?: '29AAACJ1234A1Z5';
+    // Derive PAN from GSTIN if 15 chars, else default
+    $pan = (strlen($gstin) === 15) ? substr($gstin, 2, 10) : 'AAACJ1234A';
+
+    return [
+        'company_name'    => $companyName,
+        'tagline'         => 'Government Licensed Security & Protection Agency',
+        'address'         => setting('company_address') ?: "Plot No. 42, Commercial Hub, Airport Road\nHubballi, Karnataka - 580030",
+        'phone'           => setting('company_phone') ?: '+91 83109 79654',
+        'email'           => setting('company_email') ?: 'accounts@jattamkommerce.com',
+        'gstin'           => $gstin,
+        'pan'             => $pan,
+        'state'           => 'Karnataka',
+        'state_code'      => '29',
+        'sac_code'        => '998525', // Security and Guard Services
+        'rcm_applicable'  => 'No',
+        'bank_name'       => setting('bank_name', 'State Bank of India'),
+        'account_name'    => setting('bank_account_name', $companyName),
+        'account_no'      => setting('bank_account_no', '38491028475'),
+        'account_type'    => setting('bank_account_type', 'Current Account'),
+        'ifsc_code'       => setting('bank_ifsc', 'SBIN0000845'),
+        'branch'          => setting('bank_branch', 'Hubballi Main Branch, Karnataka'),
+        'upi_id'          => setting('company_upi', '8310979654@ybl'),
+    ];
+}
+
+/**
+ * Builds dynamic UPI intent payment URL for scan-and-pay
+ */
+function upi_payment_url(string $upiId, string $payeeName, float $amount, string $invoiceNo): string
+{
+    $params = [
+        'pa' => $upiId,
+        'pn' => $payeeName,
+        'am' => number_format($amount, 2, '.', ''),
+        'cu' => 'INR',
+        'tn' => 'Inv ' . $invoiceNo,
+    ];
+    return 'upi://pay?' . http_build_query($params);
+}
