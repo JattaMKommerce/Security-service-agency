@@ -157,7 +157,7 @@ require APP_ROOT . '/includes/layout/header.php';
                     <div class="col-md-4"><label class="form-label">ID proof number</label><input name="id_proof_number" class="form-control" value="<?= $v('id_proof_number') ?>"></div>
                     <div class="col-md-4"><label class="form-label">Joined on</label><input type="date" name="joined_on" class="form-control" value="<?= $v('joined_on') ?>"></div>
                     <div class="col-md-4"><label class="form-label">Experience (years)</label><input type="number" min="0" max="60" name="experience_years" class="form-control" value="<?= $v('experience_years') ?>"></div>
-                    <div class="col-md-4"><label class="form-label">Skills / training</label><input name="skills" class="form-control" value="<?= $v('skills') ?>" placeholder="e.g. Close protection, First aid, Driving"></div>
+                    <div class="col-md-4"><label class="form-label">Guard Duties & Specialization</label><input name="skills" class="form-control" value="<?= $v('skills') ?>" placeholder="e.g. VIP Bodyguard, Gate Security, Night Patrol, Driving"><div class="form-text text-muted" style="font-size: 0.75rem;">Assigned duties (e.g. VIP escort, gate security, CCTV patrol).</div></div>
                     <div class="col-md-4 d-flex align-items-end">
                         <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="is_armed" value="1" id="isArmed" <?= !empty($g['is_armed']) ? 'checked' : '' ?>>
                             <label class="form-check-label fw-semibold" for="isArmed">Armed with Gun (Firearm)</label></div>

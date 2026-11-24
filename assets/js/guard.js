@@ -65,14 +65,19 @@
         return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
     }
 
-    // ---------- map ----------
-    const map = L.map('gMap', { zoomControl: false, attributionControl: true }).setView([G.mapDefault[0], G.mapDefault[1]], G.mapDefault[2]);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    // ---------- map & location ----------
+    const mapEl = $('gMap');
+    const map = (typeof L !== 'undefined' && mapEl)
+        ? L.map('gMap', { zoomControl: false, attributionControl: true }).setView([G.mapDefault[0], G.mapDefault[1]], G.mapDefault[2])
+        : null;
+    if (map) {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    }
     let siteMarker = null, siteCircle = null, meMarker = null, meCircle = null, fittedOnce = false;
 
     function renderMap() {
         const a = state && state.assignment;
-        if (a && a.lat !== null) {
+        if (map && a && a.lat !== null) {
             if (!siteMarker) {
                 siteMarker = L.marker([a.lat, a.lng]).addTo(map).bindTooltip(esc(a.site_name));
                 siteCircle = L.circle([a.lat, a.lng], { radius: a.radius, color: '#1d4ed8', weight: 2, fillOpacity: .08 }).addTo(map);
@@ -80,32 +85,37 @@
                 siteMarker.setLatLng([a.lat, a.lng]);
                 siteCircle.setLatLng([a.lat, a.lng]).setRadius(a.radius);
             }
-        } else if (siteMarker) {
+        } else if (map && siteMarker) {
             map.removeLayer(siteMarker); map.removeLayer(siteCircle); siteMarker = siteCircle = null;
         }
         if (lastFix) {
             const ll = [lastFix.lat, lastFix.lng];
-            if (!meMarker) {
-                meMarker = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: '#16a34a', fillOpacity: 1 }).addTo(map);
-                meCircle = L.circle(ll, { radius: lastFix.accuracy || 0, color: '#16a34a', weight: 1, fillOpacity: .1 }).addTo(map);
-            } else {
-                meMarker.setLatLng(ll);
-                meCircle.setLatLng(ll).setRadius(lastFix.accuracy || 0);
+            if (map) {
+                if (!meMarker) {
+                    meMarker = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: '#16a34a', fillOpacity: 1 }).addTo(map);
+                    meCircle = L.circle(ll, { radius: lastFix.accuracy || 0, color: '#16a34a', weight: 1, fillOpacity: .1 }).addTo(map);
+                } else {
+                    meMarker.setLatLng(ll);
+                    meCircle.setLatLng(ll).setRadius(lastFix.accuracy || 0);
+                }
+                if (!fittedOnce) {
+                    fittedOnce = true;
+                    if (siteCircle) map.fitBounds(L.latLngBounds([ll]).extend(siteCircle.getBounds()), { padding: [20, 20], maxZoom: 17 });
+                    else map.setView(ll, 16);
+                }
             }
-            if (!fittedOnce) {
-                fittedOnce = true;
-                if (siteCircle) map.fitBounds(L.latLngBounds([ll]).extend(siteCircle.getBounds()), { padding: [20, 20], maxZoom: 17 });
-                else map.setView(ll, 16);
+            if ($('myPos')) {
+                $('myPos').textContent = 'GPS Active ±' + Math.round(lastFix.accuracy || 0) + ' m';
             }
-            $('myPos').textContent = 'GPS ±' + Math.round(lastFix.accuracy || 0) + ' m';
-            if (a && a.lat !== null) {
+            if (a && a.lat !== null && $('myDist')) {
                 const d = distance(ll, [a.lat, a.lng]);
-                $('myDist').textContent = fmtDist(d) + ' from site';
+                $('myDist').textContent = fmtDist(d) + ' from post';
                 $('myDist').className = 'fw-semibold ' + (d > a.radius + Math.min(150, lastFix.accuracy || 0) ? 'text-danger' : 'text-success');
-            } else {
-                $('myDist').textContent = '';
+            } else if ($('myDist')) {
+                $('myDist').textContent = 'Location Synced';
+                $('myDist').className = 'fw-semibold text-success';
             }
-        } else if (siteMarker && !fittedOnce) {
+        } else if (map && siteMarker && !fittedOnce) {
             map.fitBounds(siteCircle.getBounds(), { padding: [20, 20] });
         }
     }
@@ -344,6 +354,32 @@
     ring.style.strokeDashoffset = CIRC;
     let holdStart = 0, holdRaf = null;
 
+    function playSosAlarmSound() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            if (ctx.state === 'suspended') ctx.resume();
+            let now = ctx.currentTime;
+            for (let i = 0; i < 6; i++) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1500, now + 0.22);
+                gain.gain.setValueAtTime(0.85, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.32);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.34);
+                now += 0.38;
+            }
+        } catch (e) {
+            console.warn('SOS alarm audio error:', e);
+        }
+    }
+
     function holdFrame() {
         const p = Math.min(1, (Date.now() - holdStart) / HOLD_MS);
         ring.style.strokeDashoffset = CIRC * (1 - p);
@@ -358,6 +394,7 @@
     sosBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
     async function raiseSos() {
+        playSosAlarmSound();
         vibrate([400, 100, 400, 100, 400]);
         toast('Sending SOS…', 8000);
         // Never wait long for GPS in an emergency; location follows with tracking.

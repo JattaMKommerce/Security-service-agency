@@ -67,17 +67,17 @@ define('IS_HTTPS', str_starts_with(BASE_URL, 'https://'));
 
 // ---- Session --------------------------------------------------------------
 if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
-    $basePath = parse_url(BASE_URL, PHP_URL_PATH) ?: '/';
     session_name('SAGSESS');
+    // Persistent session (1 year) so mobile guard app never randomly logs out
     session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => rtrim($basePath, '/') . '/',
+        'lifetime' => 31536000,
+        'path'     => '/',
         'secure'   => IS_HTTPS,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
     ini_set('session.use_strict_mode', '1');
-    ini_set('session.gc_maxlifetime', '43200'); // 12 hours: a full guard shift
+    ini_set('session.gc_maxlifetime', '31536000'); // 1 year persistence
     session_start();
 }
 

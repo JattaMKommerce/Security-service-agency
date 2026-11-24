@@ -287,11 +287,11 @@ function clear_guard_login_lock(int $guardId): void
 }
 
 const GUARD_REMEMBER_COOKIE = 'sag_guard';
-const GUARD_REMEMBER_DAYS = 30;
+const GUARD_REMEMBER_DAYS = 365;
 
 /**
- * Keeps the guard signed in on their phone for 30 days, so a closed browser
- * doesn't stop tracking mid-shift. Logging in on a new phone signs out the old one.
+ * Keeps the guard signed in on their phone permanently (365 days), so closing the app
+ * never logs them out until access is explicitly revoked by the admin.
  */
 function guard_issue_remember(int $guardId): void
 {
@@ -300,7 +300,7 @@ function guard_issue_remember(int $guardId): void
     q('UPDATE guards SET remember_hash = ?, remember_expires = ? WHERE id = ?', [hash('sha256', $token), date('Y-m-d H:i:s', $expires), $guardId]);
     setcookie(GUARD_REMEMBER_COOKIE, $guardId . ':' . $token, [
         'expires'  => $expires,
-        'path'     => rtrim(parse_url(BASE_URL, PHP_URL_PATH) ?: '', '/') . '/',
+        'path'     => '/',
         'secure'   => IS_HTTPS,
         'httponly' => true,
         'samesite' => 'Lax',
@@ -313,8 +313,11 @@ function guard_clear_remember(?int $guardId): void
         q('UPDATE guards SET remember_hash = NULL, remember_expires = NULL WHERE id = ?', [$guardId]);
     }
     setcookie(GUARD_REMEMBER_COOKIE, '', [
-        'expires' => time() - 3600, 'path' => rtrim(parse_url(BASE_URL, PHP_URL_PATH) ?: '', '/') . '/',
-        'secure' => IS_HTTPS, 'httponly' => true, 'samesite' => 'Lax',
+        'expires' => time() - 3600,
+        'path'    => '/',
+        'secure'  => IS_HTTPS,
+        'httponly' => true,
+        'samesite' => 'Lax',
     ]);
 }
 
@@ -346,6 +349,11 @@ function current_guard(): ?array
         $row = q_one('SELECT * FROM guards WHERE id = ?', [(int)$_SESSION['guard_id']]);
         if ($row && $row['status'] === 'active') {
             $guard = $row;
+        } else {
+            // Access revoked by admin or guard marked inactive
+            $revokedId = (int)($_SESSION['guard_id'] ?? 0);
+            unset($_SESSION['guard_id']);
+            guard_clear_remember($revokedId);
         }
     }
     return $guard;

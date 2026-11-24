@@ -6,7 +6,6 @@ $title = 'Duty';
 <html lang="en">
 <head>
     <?php require __DIR__ . '/_head.php'; ?>
-    <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 </head>
 <body class="g-body">
 <header class="g-top">
@@ -65,10 +64,20 @@ $title = 'Duty';
         <div class="small text-muted mt-2">Press and hold for 2 seconds to alert the control room with your location.</div>
     </section>
 
-    <!-- Map -->
-    <section class="g-card p-0 overflow-hidden">
-        <div id="gMap" style="height:240px"></div>
-        <div class="p-3 small d-flex justify-content-between"><span id="myPos" class="text-muted">Waiting for GPS…</span><span id="myDist" class="fw-semibold"></span></div>
+    <!-- Live Location Status (Clean & Battery-Saving) -->
+    <section class="g-card">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; display: grid; place-items: center; font-size: 1.3rem;">
+                    <i class="bi bi-geo-alt-fill"></i>
+                </div>
+                <div>
+                    <div class="g-label mb-1">Live GPS Duty Status</div>
+                    <div id="myPos" class="fw-semibold small text-dark">Detecting GPS location…</div>
+                </div>
+            </div>
+            <div id="myDist" class="small fw-bold text-end"></div>
+        </div>
     </section>
 
     <!-- Stats / history -->
@@ -78,13 +87,11 @@ $title = 'Duty';
     </section>
 
     <section class="g-card small text-muted" id="tips">
-        <div class="fw-semibold text-body mb-1"><i class="bi bi-info-circle"></i> For accurate tracking</div>
+        <div class="fw-semibold text-body mb-1"><i class="bi bi-info-circle"></i> Duty Guidelines</div>
         <ul class="mb-0 ps-3">
-            <li>Keep this app open with the screen on while on duty (the app keeps the screen awake).</li>
-            <li>Turn on GPS / high-accuracy location and allow location for this app.</li>
-            <li>Install the app: browser menu → <em>Add to Home screen</em>.</li>
+            <li>Keep this app open while on duty (screen stays awake automatically).</li>
+            <li>Turn on high-accuracy location so your post coordinates sync to control room.</li>
         </ul>
-        <button class="btn btn-sm btn-outline-primary mt-2 d-none" id="installBtn"><i class="bi bi-download"></i> Install app</button>
     </section>
 </main>
 
@@ -99,7 +106,6 @@ $title = 'Duty';
         mapDefault: [<?= (float)setting('map_default_lat', '20.5937') ?>, <?= (float)setting('map_default_lng', '78.9629') ?>, <?= (int)setting('map_default_zoom', '5') ?>]
     };
 </script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="<?= asset('js/guard.js') ?>"></script>
 </body>
 </html>

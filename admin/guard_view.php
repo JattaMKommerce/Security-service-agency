@@ -101,7 +101,7 @@ require APP_ROOT . '/includes/layout/header.php';
                     <dt>Address</dt><dd><?= nl2br(e($g['address'] ?: '—')) ?></dd>
                     <dt>ID proof</dt><dd><?= e($g['id_proof_type'] ?: '—') ?> <?= e($g['id_proof_number'] ?? '') ?></dd>
                     <dt>Experience</dt><dd><?= (int)$g['experience_years'] ?> years</dd>
-                    <dt>Skills</dt><dd><?= e($g['skills'] ?: '—') ?></dd>
+                    <dt>Duties & Specialization</dt><dd><?= e($g['skills'] ?: '—') ?></dd>
                     <?php if ($g['is_armed']): ?><dt>Weapon licence</dt><dd><?= e($g['weapon_license_no'] ?: '—') ?></dd><?php endif; ?>
                     <dt>Joined</dt><dd><?= e(fmt_date($g['joined_on'])) ?></dd>
                     <dt>Emergency</dt><dd><?= e($g['emergency_contact_name'] ?: '—') ?> <?= $g['emergency_contact_phone'] ? '· <a href="tel:' . e($g['emergency_contact_phone']) . '">' . e($g['emergency_contact_phone']) . '</a>' : '' ?></dd>
