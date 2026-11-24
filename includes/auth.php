@@ -111,7 +111,9 @@ function current_admin(): ?array
 function admin_logout(): void
 {
     unset($_SESSION['admin_id'], $_SESSION['admin_last_active']);
-    session_regenerate_id(true);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        @session_regenerate_id(true);
+    }
 }
 
 /** Protects admin pages and admin APIs. */

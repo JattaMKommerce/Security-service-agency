@@ -9,6 +9,8 @@ if (is_post() && csrf_valid()) {
     }
     guard_clear_remember($gid);
     unset($_SESSION['guard_id']);
-    session_regenerate_id(true);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        @session_regenerate_id(true);
+    }
 }
 redirect('guard/login.php');

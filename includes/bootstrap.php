@@ -39,30 +39,34 @@ set_exception_handler(function (Throwable $e) use ($cfg) {
 });
 
 // ---- Base URL -------------------------------------------------------------
-function detect_base_url(): string
-{
-    $configured = rtrim((string)($GLOBALS['config']['app']['base_url'] ?? ''), '/');
-    if ($configured !== '') {
-        return $configured;
-    }
-    if (PHP_SAPI === 'cli') {
-        return '';
-    }
-    $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-           || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-    $scheme = $https ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+if (!function_exists('detect_base_url')) {
+    function detect_base_url(): string
+    {
+        $configured = rtrim((string)($GLOBALS['config']['app']['base_url'] ?? ''), '/');
+        if ($configured !== '') {
+            return $configured;
+        }
+        if (PHP_SAPI === 'cli') {
+            return '';
+        }
+        $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+               || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $scheme = $https ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-    $docRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '';
-    $appRoot = realpath(APP_ROOT) ?: APP_ROOT;
-    $path = '';
-    if ($docRoot !== '' && str_starts_with($appRoot, $docRoot)) {
-        $path = str_replace('\\', '/', substr($appRoot, strlen($docRoot)));
-        $path = implode('/', array_map('rawurlencode', explode('/', $path)));
+        $docRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '';
+        $appRoot = realpath(APP_ROOT) ?: APP_ROOT;
+        $path = '';
+        if ($docRoot !== '' && str_starts_with($appRoot, $docRoot)) {
+            $path = str_replace('\\', '/', substr($appRoot, strlen($docRoot)));
+            $path = implode('/', array_map('rawurlencode', explode('/', $path)));
+        }
+        return $scheme . '://' . $host . rtrim($path, '/');
     }
-    return $scheme . '://' . $host . rtrim($path, '/');
 }
-define('BASE_URL', detect_base_url());
+if (!defined('BASE_URL')) {
+    define('BASE_URL', detect_base_url());
+}
 define('IS_HTTPS', str_starts_with(BASE_URL, 'https://'));
 
 // ---- Session --------------------------------------------------------------

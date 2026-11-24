@@ -71,60 +71,234 @@ $p = paginate($from, $params,
 $clients = q_all("SELECT id, name FROM clients ORDER BY name");
 $counts = q_one("SELECT COUNT(*) total, SUM(status='active') active, SUM(is_on_duty) on_duty, SUM(is_armed=1) armed, SUM(is_armed=0) unarmed FROM guards");
 
+// Calculate active filters count
+$activeFilterCount = 0;
+if ($search !== '') $activeFilterCount++;
+if ($category !== '') $activeFilterCount++;
+if ($weapon !== '') $activeFilterCount++;
+if ($status !== '') $activeFilterCount++;
+if ($avail !== '') $activeFilterCount++;
+if ($clientId > 0) $activeFilterCount++;
+
 $pageTitle = 'Guards & Bodyguards';
 $activeNav = 'guards';
 require APP_ROOT . '/includes/layout/header.php';
 ?>
-<div class="page-actions">
-    <form class="filter-bar" method="get">
-        <input type="search" name="q" value="<?= e($search) ?>" class="form-control" placeholder="Search name, code, phone, city">
-        <select name="category" class="form-select">
-            <option value="">All categories</option>
-            <?php foreach (guard_categories() as $ck => $cv): ?>
-                <option value="<?= $ck ?>" <?= $category === $ck ? 'selected' : '' ?>><?= e($cv) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select name="weapon" class="form-select">
-            <option value="">Armed & Unarmed</option>
-            <option value="armed" <?= $weapon === 'armed' ? 'selected' : '' ?>>Armed (Gun)</option>
-            <option value="unarmed" <?= $weapon === 'unarmed' ? 'selected' : '' ?>>Unarmed</option>
-        </select>
-        <select name="status" class="form-select">
-            <option value="">Any status</option>
-            <?php foreach (['active', 'on_leave', 'inactive'] as $s): ?>
-                <option value="<?= $s ?>" <?= $status === $s ? 'selected' : '' ?>><?= label($s) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select name="availability" class="form-select">
-            <option value="">Hired or available</option>
-            <option value="available" <?= $avail === 'available' ? 'selected' : '' ?>>Available (not hired)</option>
-            <option value="hired" <?= $avail === 'hired' ? 'selected' : '' ?>>Hired</option>
-            <option value="on_duty" <?= $avail === 'on_duty' ? 'selected' : '' ?>>On duty now</option>
-        </select>
-        <select name="client_id" class="form-select">
-            <option value="">Any client</option>
-            <?php foreach ($clients as $c): ?>
-                <option value="<?= (int)$c['id'] ?>" <?= $clientId === (int)$c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Filter</button>
-        <?php if ($search || $category || $weapon || $status || $avail || $clientId): ?><a href="<?= url('admin/guards.php') ?>" class="btn btn-link">Clear</a><?php endif; ?>
-    </form>
-    <div class="d-flex gap-2">
-        <a href="<?= url('guard/install.php') ?>" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-phone"></i> App & APK Guide</a>
-        <a href="<?= url('admin/guard_form.php') ?>" class="btn btn-primary"><i class="bi bi-person-plus"></i> Add guard</a>
+
+<!-- 1. Hero Banner (Clean SaaS Look) -->
+<div class="guard-hero-banner mb-3">
+    <div class="guard-hero-content">
+        <h2 class="guard-hero-title">Guards Management</h2>
+        <p class="guard-hero-sub">Manage, assign and track your security staff</p>
+    </div>
+    <div class="guard-hero-graphic">
+        <img src="<?= asset('img/guards/corporate-park-guard.jpg') ?>" alt="Security Officer" class="guard-hero-img">
     </div>
 </div>
 
-<div class="small text-muted mb-2">
-    <?= (int)$counts['total'] ?> total · <?= (int)$counts['active'] ?> active · <?= (int)$counts['on_duty'] ?> on duty now ·
-    <span class="text-warning fw-semibold"><i class="bi bi-shield-fill-check"></i> <?= (int)$counts['armed'] ?> armed (gun)</span> ·
-    <span class="text-secondary"><?= (int)$counts['unarmed'] ?> unarmed</span>
+<!-- 2. Clean Search & Filters Card -->
+<div class="filter-card-clean">
+    <form method="get" action="<?= url('admin/guards.php') ?>">
+        <!-- Search Input 100% Width -->
+        <div class="search-input-wrap position-relative mb-3">
+            <i class="bi bi-search search-icon-left"></i>
+            <input type="search" name="q" value="<?= e($search) ?>" class="form-control form-control-clean ps-5" placeholder="Search by name, code or phone...">
+        </div>
+
+        <!-- 2-Column Responsive Filter Grid -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div class="filter-select-wrap">
+                    <i class="bi bi-grid filter-select-icon"></i>
+                    <select name="category" class="form-select form-select-clean">
+                        <option value="">All categories</option>
+                        <?php foreach (guard_categories() as $ck => $cv): ?>
+                            <option value="<?= $ck ?>" <?= $category === $ck ? 'selected' : '' ?>><?= e($cv) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="filter-select-wrap">
+                    <i class="bi bi-shield-check filter-select-icon"></i>
+                    <select name="weapon" class="form-select form-select-clean">
+                        <option value="">Armed & Unarmed</option>
+                        <option value="armed" <?= $weapon === 'armed' ? 'selected' : '' ?>>Armed (Gun)</option>
+                        <option value="unarmed" <?= $weapon === 'unarmed' ? 'selected' : '' ?>>Unarmed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="filter-select-wrap">
+                    <i class="bi bi-activity filter-select-icon"></i>
+                    <select name="status" class="form-select form-select-clean">
+                        <option value="">Any status</option>
+                        <?php foreach (['active', 'on_leave', 'inactive'] as $s): ?>
+                            <option value="<?= $s ?>" <?= $status === $s ? 'selected' : '' ?>><?= label($s) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="filter-select-wrap">
+                    <i class="bi bi-person filter-select-icon"></i>
+                    <select name="availability" class="form-select form-select-clean">
+                        <option value="">Hired or available</option>
+                        <option value="available" <?= $avail === 'available' ? 'selected' : '' ?>>Available (not hired)</option>
+                        <option value="hired" <?= $avail === 'hired' ? 'selected' : '' ?>>Hired</option>
+                        <option value="on_duty" <?= $avail === 'on_duty' ? 'selected' : '' ?>>On duty now</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="filter-select-wrap">
+                    <i class="bi bi-building filter-select-icon"></i>
+                    <select name="client_id" class="form-select form-select-clean">
+                        <option value="">Any client</option>
+                        <?php foreach ($clients as $c): ?>
+                            <option value="<?= (int)$c['id'] ?>" <?= $clientId === (int)$c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Action Buttons -->
+        <div class="d-flex align-items-center gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1 py-2 fw-bold rounded-3 shadow-sm" style="background:#2563eb;border-color:#2563eb;">
+                <i class="bi bi-funnel me-1"></i> Apply Filters <?= $activeFilterCount ? '(' . $activeFilterCount . ')' : '' ?>
+            </button>
+            <a href="<?= url('admin/guards.php') ?>" class="btn btn-outline-secondary py-2 px-3 fw-semibold rounded-3 bg-white text-dark">
+                <i class="bi bi-arrow-clockwise me-1"></i> Reset
+            </a>
+        </div>
+    </form>
 </div>
 
-<div class="card table-card">
+<!-- 3. Summary Statistics Section (4 Clean Cards) -->
+<div class="stat-grid-4">
+    <!-- Total -->
+    <div class="stat-box-modern">
+        <div class="stat-box-icon text-purple bg-purple-subtle">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="stat-box-num"><?= (int)$counts['total'] ?></div>
+        <div class="stat-box-lbl">Total</div>
+    </div>
+    <!-- Active -->
+    <div class="stat-box-modern">
+        <div class="stat-box-icon text-success bg-success-subtle">
+            <span class="stat-dot-green"></span>
+        </div>
+        <div class="stat-box-num"><?= (int)$counts['active'] ?></div>
+        <div class="stat-box-lbl">Active</div>
+    </div>
+    <!-- Armed -->
+    <div class="stat-box-modern">
+        <div class="stat-box-icon text-warning bg-warning-subtle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 8H7.5L5 10.5V13h2v4h3v-2.5h9L22 12V8z"/>
+            </svg>
+        </div>
+        <div class="stat-box-num"><?= (int)$counts['armed'] ?></div>
+        <div class="stat-box-lbl">Armed</div>
+    </div>
+    <!-- Unarmed -->
+    <div class="stat-box-modern">
+        <div class="stat-box-icon text-primary bg-primary-subtle">
+            <i class="bi bi-shield"></i>
+        </div>
+        <div class="stat-box-num"><?= (int)$counts['unarmed'] ?></div>
+        <div class="stat-box-lbl">Unarmed</div>
+    </div>
+</div>
+
+<!-- 4. Section Header & Responsive Action Buttons -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h2 class="fs-5 fw-bold m-0 text-dark">Guards (<?= (int)$p['total'] ?>)</h2>
+    <div class="d-flex align-items-center gap-2">
+        <a href="<?= url('guard/install.php') ?>" target="_blank" class="btn btn-outline-secondary btn-sm px-3 py-1-5 fw-semibold rounded-pill bg-white text-dark shadow-sm">
+            <i class="bi bi-phone me-1"></i> App & APK Guide
+        </a>
+        <a href="<?= url('admin/guard_form.php') ?>" class="btn btn-primary btn-sm px-3 py-1-5 fw-bold rounded-pill shadow-sm" style="background:#2563eb;border-color:#2563eb;">
+            <i class="bi bi-plus-lg me-1"></i> Add Guard
+        </a>
+    </div>
+</div>
+
+<!-- 5. MOBILE GUARD CARDS (Visible only on mobile devices) -->
+<div class="d-md-none">
+    <?php if (!$p['rows']): ?>
+        <div class="empty-state bg-white rounded-4 border p-4 mb-3 text-center">
+            <i class="bi bi-person-badge fs-2 text-muted mb-2 d-block"></i>
+            <div class="fw-semibold text-dark">No guards found</div>
+            <div class="small text-muted mb-3">Try adjusting your search or filters.</div>
+            <a href="<?= url('admin/guard_form.php') ?>" class="btn btn-sm btn-primary rounded-pill px-3">Add Guard</a>
+        </div>
+    <?php endif; ?>
+
+    <?php foreach ($p['rows'] as $g): ?>
+        <div class="guard-mobile-card mb-2">
+            <div class="d-flex align-items-center gap-3">
+                <!-- Avatar / Photo -->
+                <a href="<?= url('admin/guard_view.php?id=' . $g['id']) ?>" class="text-decoration-none flex-shrink-0">
+                    <?php if ($g['photo']): ?>
+                        <img src="<?= asset('uploads/' . $g['photo']) ?>" alt="<?= e($g['full_name']) ?>" class="guard-avatar-img-sm">
+                    <?php else: ?>
+                        <div class="guard-avatar-initials-sm"><?= e(strtoupper(substr($g['full_name'], 0, 1))) ?></div>
+                    <?php endif; ?>
+                </a>
+
+                <!-- Middle Content: Name, Verified Badge, Code, City, Status -->
+                <div class="flex-grow-1 min-w-0">
+                    <a href="<?= url('admin/guard_view.php?id=' . $g['id']) ?>" class="text-decoration-none d-block">
+                        <div class="guard-name-row text-truncate">
+                            <span class="guard-name-text"><?= e($g['full_name']) ?></span>
+                            <i class="bi bi-patch-check-fill verified-badge" title="Verified Guard"></i>
+                        </div>
+                        <div class="guard-code-text text-truncate">
+                            <?= e($g['employee_code']) ?><?= $g['city'] ? ' · ' . e($g['city']) : '' ?>
+                        </div>
+                    </a>
+                    <div class="mt-1">
+                        <span class="status-pill-active">
+                            <span class="stat-dot-green" style="width:7px;height:7px;box-shadow:none;"></span>
+                            <?= label($g['status']) ?>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Right Side: Category Pill & Tap-to-Call Phone -->
+                <div class="text-end flex-shrink-0">
+                    <div class="mb-1">
+                        <span class="category-pill-clean">
+                            <?php if ($g['category'] === 'agency_security' || $g['is_armed']): ?>
+                                <i class="bi bi-shield-check"></i>
+                            <?php endif; ?>
+                            <?= e(guard_categories()[$g['category']] ?? label($g['category'] ?? 'bodyguard')) ?>
+                        </span>
+                    </div>
+                    <div>
+                        <a href="tel:<?= e($g['phone']) ?>" class="phone-link-clean">
+                            <i class="bi bi-telephone text-muted" style="font-size:0.75rem;"></i>
+                            <span><?= e($g['phone']) ?></span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Chevron Link -->
+                <a href="<?= url('admin/guard_view.php?id=' . $g['id']) ?>" class="text-muted ms-1 text-decoration-none flex-shrink-0 p-1" aria-label="View Details">
+                    <i class="bi bi-chevron-right fs-6"></i>
+                </a>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<!-- 6. DESKTOP TABLE (Visible on tablets and desktop screens) -->
+<div class="card table-card d-none d-md-block mb-3">
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle mb-0">
             <thead>
                 <tr>
                     <th>Guard</th>
@@ -196,6 +370,11 @@ require APP_ROOT . '/includes/layout/header.php';
             </tbody>
         </table>
     </div>
-    <div class="card-footer"><?= pagination_links($p) ?></div>
 </div>
+
+<!-- 7. Pagination Links (Responsive) -->
+<div class="d-flex justify-content-center mt-3 mb-4">
+    <?= pagination_links($p) ?>
+</div>
+
 <?php require APP_ROOT . '/includes/layout/footer.php'; ?>

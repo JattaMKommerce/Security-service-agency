@@ -71,12 +71,29 @@ $nav = [
 
     <div class="main">
         <header class="topbar">
-            <button class="btn btn-icon d-lg-none" id="sidebarToggle" aria-label="Menu"><i class="bi bi-list"></i></button>
-            <h1 class="topbar-title"><?= e($pageTitle) ?></h1>
-            <div class="ms-auto d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
+                <button class="btn btn-icon d-lg-none flex-shrink-0 topbar-burger-btn" id="sidebarToggle" aria-label="Menu"><i class="bi bi-list fs-5"></i></button>
+                <div class="topbar-divider d-lg-none"></div>
+                <div class="topbar-brand-wrap d-flex align-items-center gap-2 min-w-0">
+                    <span class="topbar-shield-icon d-lg-none flex-shrink-0"><i class="bi bi-shield-check"></i></span>
+                    <div class="min-w-0 lh-1">
+                        <?php if ($pageTitle === 'Guards & Bodyguards'): ?>
+                            <div class="topbar-title-multiline d-lg-none">
+                                <span class="d-block topbar-title-line">Guards &amp;</span>
+                                <span class="d-block topbar-title-line">Bodyguards</span>
+                            </div>
+                            <h1 class="topbar-title d-none d-lg-block text-truncate"><?= e($pageTitle) ?></h1>
+                        <?php else: ?>
+                            <h1 class="topbar-title text-truncate"><?= e($pageTitle) ?></h1>
+                        <?php endif; ?>
+                        <div class="topbar-subtitle d-lg-none text-truncate">Jatta Security</div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
                 <div class="dropdown">
-                    <button class="btn btn-icon position-relative" data-bs-toggle="dropdown" aria-label="Alerts" id="alertBell">
-                        <i class="bi bi-bell"></i>
+                    <button class="btn btn-icon position-relative topbar-bell-btn" data-bs-toggle="dropdown" aria-label="Alerts" id="alertBell">
+                        <i class="bi bi-bell fs-5"></i>
                         <span class="bell-dot js-alert-count<?= $openAlerts ? '' : ' d-none' ?>"><?= $openAlerts ?></span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end alert-menu p-0">
@@ -88,9 +105,10 @@ $nav = [
                     </div>
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-user dropdown-toggle" data-bs-toggle="dropdown">
+                    <button class="btn btn-user dropdown-toggle topbar-user-pill" data-bs-toggle="dropdown">
                         <span class="avatar avatar-sm avatar-initials"><?= e(initials($admin['name'])) ?></span>
-                        <span class="d-none d-md-inline"><?= e($admin['name']) ?></span>
+                        <span class="d-none d-md-inline ms-1"><?= e($admin['name']) ?></span>
+                        <i class="bi bi-caret-down-fill topbar-caret d-md-none ms-1"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><span class="dropdown-item-text small text-muted"><?= e($admin['email']) ?><br><?= e(label($admin['role'])) ?></span></li>
