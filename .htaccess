@@ -21,6 +21,17 @@ DirectoryIndex index.php
     RewriteRule ^(config|includes|database|storage)(/|$) - [F,L]
 </IfModule>
 
+# App signing keys must never be downloadable (they let anyone sign a fake app update)
+<FilesMatch "\.(keystore|jks|p12|pem|key)$|^signing-key-info\.txt$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 # Never serve these file types directly
 <FilesMatch "\.(sql|md|lock|log|ini|env)$">
     <IfModule mod_authz_core.c>
@@ -36,7 +47,8 @@ DirectoryIndex index.php
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+    # camera=(self) is needed for the duty selfie in the guard app
+    Header always set Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
 </IfModule>
 
 <IfModule mod_mime.c>

@@ -6,3 +6,8 @@ storage/*.log
 
 # Guard duty selfies (personal data, never commit)
 storage/selfies/
+
+# App signing keys: kept outside the project (~/Documents/Jatta-Security-Signing-Key)
+*.keystore
+*.jks
+signing-key-info.txt
