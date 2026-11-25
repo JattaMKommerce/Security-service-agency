@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS guard_locations (
 
 CREATE TABLE IF NOT EXISTS alerts (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    type                ENUM('sos','geofence_exit','late','no_movement','gps_off','offline') NOT NULL,
+    type                ENUM('sos','geofence_exit','late','no_movement','gps_off','offline','battery_low') NOT NULL,
     guard_id            INT UNSIGNED NOT NULL,
     assignment_id       INT UNSIGNED NULL,
     client_id           INT UNSIGNED NULL,
@@ -357,4 +357,5 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
     ('default_shift_hours',     '8'),
     ('ot_min_minutes',          '15'),
     ('no_movement_min',         '60'),
-    ('schema_version',          '3');
+    ('battery_alert_pct',       '15'),
+    ('schema_version',          '4');

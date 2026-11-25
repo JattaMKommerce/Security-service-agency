@@ -7,7 +7,7 @@ declare(strict_types=1);
  * database/schema.sql always holds the full, current schema for new installs.
  */
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function maybe_migrate(): void
 {
@@ -28,6 +28,11 @@ function maybe_migrate(): void
         if ($current < 3) {
             migrate_to_3();
             save_setting('schema_version', '3');
+            $current = 3;
+        }
+        if ($current < 4) {
+            migrate_to_4();
+            save_setting('schema_version', '4');
         }
     } catch (Throwable $e) {
         error_log('Database upgrade failed: ' . $e->getMessage());
@@ -146,4 +151,11 @@ function migrate_to_3(): void
 {
     db_add_columns('guards', ['weekly_off' => 'VARCHAR(20) NULL']);
     db()->exec(LEAVES_TABLE_SQL);
+}
+
+/** v4: "battery low" alert for on-duty guards. */
+function migrate_to_4(): void
+{
+    db()->exec("ALTER TABLE alerts MODIFY type ENUM('sos','geofence_exit','late','no_movement','gps_off','offline','battery_low') NOT NULL");
+    q("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('battery_alert_pct', '15')");
 }

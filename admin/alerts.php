@@ -168,6 +168,7 @@ require APP_ROOT . '/includes/layout/header.php';
             <a href="?status=<?= e($status) ?>&type=no_movement" class="btn <?= $type === 'no_movement' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Not moving</a>
             <a href="?status=<?= e($status) ?>&type=gps_off" class="btn <?= $type === 'gps_off' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">GPS off</a>
             <a href="?status=<?= e($status) ?>&type=offline" class="btn <?= $type === 'offline' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">No signal</a>
+            <a href="?status=<?= e($status) ?>&type=battery_low" class="btn <?= $type === 'battery_low' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Battery low</a>
         </div>
     </div>
 </div>

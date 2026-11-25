@@ -338,10 +338,10 @@ function status_badge(string $status): string
         'closed' => 'success', 'auto_closed' => 'secondary',
         'draft' => 'secondary', 'sent' => 'info', 'paid' => 'success', 'partially_paid' => 'warning',
         'on_duty' => 'success', 'off_duty' => 'secondary', 'available' => 'info', 'assigned' => 'primary',
-        'sos' => 'danger', 'geofence_exit' => 'warning', 'late' => 'warning', 'no_movement' => 'warning', 'gps_off' => 'danger', 'offline' => 'danger',
+        'sos' => 'danger', 'geofence_exit' => 'warning', 'late' => 'warning', 'no_movement' => 'warning', 'gps_off' => 'danger', 'offline' => 'danger', 'battery_low' => 'warning',
     ];
     $cls = $map[$status] ?? 'secondary';
-    $text = in_array($status, ['geofence_exit', 'late', 'no_movement', 'gps_off', 'offline'], true) ? alert_type_meta($status)[0] : ($status === 'sos' ? 'SOS' : label($status));
+    $text = in_array($status, ['geofence_exit', 'late', 'no_movement', 'gps_off', 'offline', 'battery_low'], true) ? alert_type_meta($status)[0] : ($status === 'sos' ? 'SOS' : label($status));
     return '<span class="badge badge-soft-' . $cls . '">' . e($text) . '</span>';
 }
 

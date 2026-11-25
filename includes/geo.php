@@ -286,7 +286,7 @@ function end_shift(int $guardId, ?float $lat, ?float $lng, ?int $adminId = null,
           [$out, $lat, $lng, $dist, $mins, $ot, $otOk, $adminId, $note, $shift['id']]);
         q('UPDATE guards SET is_on_duty = 0 WHERE id = ?', [$guardId]);
         // Leaving duty clears the shift's "left site" and tracking-health alerts.
-        resolve_guard_alerts($guardId, ['geofence_exit', 'offline', 'gps_off', 'no_movement'], 'Shift ended');
+        resolve_guard_alerts($guardId, ['geofence_exit', 'offline', 'gps_off', 'no_movement', 'battery_low'], 'Shift ended');
         // A request still waiting for approval no longer applies.
         q("UPDATE duty_extensions SET status = 'cancelled', admin_note = COALESCE(admin_note, 'Shift ended before a decision')
             WHERE attendance_id = ? AND status = 'pending'", [$shift['id']]);

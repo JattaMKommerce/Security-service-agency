@@ -7,7 +7,7 @@ $tab = get_str('tab', 20) ?: 'company';
 $companyKeys = ['company_name', 'company_address', 'company_phone', 'company_email', 'company_gstin',
                 'currency_symbol', 'tax_label', 'tax_percent', 'invoice_prefix', 'invoice_due_days', 'invoice_terms'];
 $trackingKeys = ['tracking_interval_sec', 'offline_after_min', 'location_retention_days', 'checkin_max_distance_m',
-                 'require_selfie', 'selfie_retention_days', 'late_grace_min', 'default_shift_hours', 'ot_min_minutes', 'no_movement_min',
+                 'require_selfie', 'selfie_retention_days', 'late_grace_min', 'default_shift_hours', 'ot_min_minutes', 'no_movement_min', 'battery_alert_pct',
                  'map_default_lat', 'map_default_lng', 'map_default_zoom'];
 
 if (is_post()) {
@@ -22,7 +22,7 @@ if (is_post()) {
             'checkin_max_distance_m' => [0, 50000], 'map_default_zoom' => [2, 18], 'tax_percent' => [0, 100], 'invoice_due_days' => [0, 365],
             'map_default_lat' => [-90, 90], 'map_default_lng' => [-180, 180],
             'require_selfie' => [0, 1], 'selfie_retention_days' => [7, 730], 'late_grace_min' => [0, 240],
-            'default_shift_hours' => [1, 24], 'ot_min_minutes' => [0, 120], 'no_movement_min' => [0, 600],
+            'default_shift_hours' => [1, 24], 'ot_min_minutes' => [0, 120], 'no_movement_min' => [0, 600], 'battery_alert_pct' => [0, 50],
         ];
         foreach ($keys as $k) {
             $val = trim((string)($_POST[$k] ?? ''));
@@ -167,6 +167,8 @@ require APP_ROOT . '/includes/layout/header.php';
                 <div class="form-text">Extra time shorter than this is ignored.</div></div>
             <div class="col-md-4"><label class="form-label">"Not moving" alert after (minutes)</label><input type="number" min="0" max="600" name="no_movement_min" class="form-control" value="<?= $s('no_movement_min') ?>">
                 <div class="form-text">Alert when an on-duty guard stays within <?= STILL_RADIUS_M ?> m this long. 0 = off.</div></div>
+            <div class="col-md-4"><label class="form-label">"Battery low" alert at (%)</label><input type="number" min="0" max="50" name="battery_alert_pct" class="form-control" value="<?= $s('battery_alert_pct') ?>">
+                <div class="form-text">Alert when an on-duty guard's phone battery drops to this level. 0 = off.</div></div>
             <div class="col-12"><h3 class="fs-6 fw-bold mb-0 mt-2">Map</h3></div>
             <div class="col-md-3"><label class="form-label">Map centre latitude</label><input name="map_default_lat" class="form-control" value="<?= $s('map_default_lat') ?>"></div>
             <div class="col-md-3"><label class="form-label">Map centre longitude</label><input name="map_default_lng" class="form-control" value="<?= $s('map_default_lng') ?>"></div>

@@ -20,7 +20,8 @@
         outside:   { icon: 'bi-sign-turn-right-fill', label: 'Outside site',          color: '#ea580c' },
         no_signal: { icon: 'bi-wifi-off',             label: 'No internet / signal',  color: '#dc2626' },
         gps_off:   { icon: 'bi-geo-alt',              label: 'GPS off',               color: '#dc2626' },
-        idle:      { icon: 'bi-pause-fill',           label: 'Not moving for long',   color: '#ca8a04' }
+        idle:      { icon: 'bi-pause-fill',           label: 'Not moving for long',   color: '#ca8a04' },
+        battery_low: { icon: 'bi-battery-half',       label: 'Battery low',           color: '#ca8a04' }
     };
 
     function create(el, opts = {}) {

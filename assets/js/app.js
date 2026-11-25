@@ -125,7 +125,8 @@
         late: { icon: 'bi-alarm-fill', cls: 'tint-amber', title: 'Late / not reported' },
         no_movement: { icon: 'bi-pause-circle-fill', cls: 'tint-amber', title: 'Not moving' },
         gps_off: { icon: 'bi-geo-alt', cls: 'tint-red', title: 'GPS turned off' },
-        offline: { icon: 'bi-wifi-off', cls: 'tint-red', title: 'No internet / signal' }
+        offline: { icon: 'bi-wifi-off', cls: 'tint-red', title: 'No internet / signal' },
+        battery_low: { icon: 'bi-battery-half', cls: 'tint-amber', title: 'Battery low' }
     };
     const EXT_KEY = 'sa_last_ext_id';
     const LEAVE_KEY = 'sa_last_leave_id';

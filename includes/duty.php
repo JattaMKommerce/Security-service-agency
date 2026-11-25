@@ -7,7 +7,7 @@ declare(strict_types=1);
  * health checks (no signal / GPS off / not moving / late) and duty selfies.
  */
 
-const ALERT_TYPES = ['sos', 'geofence_exit', 'late', 'no_movement', 'gps_off', 'offline'];
+const ALERT_TYPES = ['sos', 'geofence_exit', 'late', 'no_movement', 'gps_off', 'offline', 'battery_low'];
 const EARLY_CHECKIN_SEC = 3 * 3600;      // a check-in this long before shift start still counts for that shift
 const STILL_RADIUS_M = 30;               // "not moving" = every point stays within this distance
 const PATROL_MIN_SPEED = 1.0;            // m/s (about 3.6 km/h, walking pace)
@@ -23,6 +23,7 @@ function alert_type_meta(string $type): array
         'no_movement'   => ['Not Moving',          'bi-pause-circle-fill',        'warning'],
         'gps_off'       => ['GPS Turned Off',      'bi-geo-alt',                  'danger'],
         'offline'       => ['No Internet / Signal', 'bi-wifi-off',                'danger'],
+        'battery_low'   => ['Battery Low',         'bi-battery-half',             'warning'],
     ][$type] ?? [label($type), 'bi-bell-fill', 'secondary'];
 }
 
@@ -329,6 +330,7 @@ function maybe_run_live_checks(): void
  *  gps_off     – phone is online but GPS / location permission is off
  *  no_movement – on-duty guard stayed within a few metres for too long
  *  late        – deployed guard has not started duty after shift start + grace
+ *  battery_low – on-duty phone battery at or below the Settings threshold (phone may switch off soon)
  */
 function run_live_checks(): void
 {
@@ -340,7 +342,7 @@ function run_live_checks(): void
     // Off-duty guards can't have duty-health alerts.
     q("UPDATE alerts al JOIN guards g ON g.id = al.guard_id
           SET al.status = 'resolved', al.resolved_at = ?, al.resolution_note = 'Guard is off duty'
-        WHERE g.is_on_duty = 0 AND al.type IN ('offline','gps_off','no_movement') AND al.status <> 'resolved'", [now()]);
+        WHERE g.is_on_duty = 0 AND al.type IN ('offline','gps_off','no_movement','battery_low') AND al.status <> 'resolved'", [now()]);
 
     $guards = q_all("SELECT g.*, at.id AS att_id, at.check_in_at
                        FROM guards g LEFT JOIN attendance at ON at.guard_id = g.id AND at.status = 'open'
@@ -380,7 +382,19 @@ function run_live_checks(): void
                 resolve_guard_alerts($gid, ['gps_off'], 'GPS is back on (automatic)');
             }
 
-            // 3) Not moving for too long
+            // 3) Battery low: the phone may switch off soon (level is reported with every GPS update)
+            $batPct = (int)setting('battery_alert_pct', '15');
+            if ($batPct > 0 && $g['last_battery'] !== null && $online) {
+                $bat = (int)$g['last_battery'];
+                if ($bat <= $batPct) {
+                    open_guard_alert('battery_low', $g, $asg, $lat, $lng,
+                        sprintf('%s\'s phone battery is at %d%%%s — it may switch off soon. Ask the guard to charge it.', $g['full_name'], $bat, $where));
+                } elseif ($bat >= $batPct + 5) {
+                    resolve_guard_alerts($gid, ['battery_low'], 'Phone is charging / battery back to ' . $bat . '% (automatic)');
+                }
+            }
+
+            // 4) Not moving for too long
             if ($stillMin > 0 && $online && $onFor >= $stillMin * 60) {
                 $pts = q_all('SELECT lat, lng, recorded_at FROM guard_locations WHERE guard_id = ? AND recorded_at >= ? ORDER BY recorded_at',
                              [$gid, date('Y-m-d H:i:s', $now - $stillMin * 60)]);
@@ -400,7 +414,7 @@ function run_live_checks(): void
             }
         }
 
-        // 4) Late / not reported for the shift
+        // 5) Late / not reported for the shift
         $occ = asg_has_shift($asg) ? current_shift_occurrence($asg, $now) : null;
         if ($occ && guard_day_off($g['weekly_off'], $leaves[$gid] ?? [], $occ['day'])) {
             // Weekly off or approved leave: nobody expects this guard today.
@@ -445,6 +459,7 @@ function guard_map_status(array $g): array
         if (!$online) $flags[] = 'no_signal';
         elseif ($gps === 'off' || $gps === 'denied') $flags[] = 'gps_off';
         if (in_array('no_movement', $types, true)) $flags[] = 'idle';
+        if (in_array('battery_low', $types, true)) $flags[] = 'battery_low';
     }
 
     $moving = false;
