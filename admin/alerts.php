@@ -10,6 +10,7 @@ if (is_post()) {
     if ($al && $action === 'acknowledge' && $al['status'] === 'open') {
         q("UPDATE alerts SET status = 'acknowledged', acknowledged_by = ?, acknowledged_at = ? WHERE id = ?", [$admin['id'], now(), $aid]);
         log_activity('alert.acknowledge', "#$aid {$al['type']}");
+        if ($al['type'] === 'sos') notify_guard((int)$al['guard_id'], '🚨 Control room has seen your SOS', 'Help is on the way. Stay safe.', 'sos');
         flash('success', 'Alert acknowledged. The guard sees that help is on the way.');
     } elseif ($al && $action === 'resolve' && $al['status'] !== 'resolved') {
         $note = post_str('note', 255) ?? 'Resolved';
@@ -169,6 +170,7 @@ require APP_ROOT . '/includes/layout/header.php';
             <a href="?status=<?= e($status) ?>&type=gps_off" class="btn <?= $type === 'gps_off' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">GPS off</a>
             <a href="?status=<?= e($status) ?>&type=offline" class="btn <?= $type === 'offline' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">No signal</a>
             <a href="?status=<?= e($status) ?>&type=battery_low" class="btn <?= $type === 'battery_low' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Battery low</a>
+            <a href="?status=<?= e($status) ?>&type=phone_off" class="btn <?= $type === 'phone_off' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">Phone off</a>
         </div>
     </div>
 </div>

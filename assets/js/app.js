@@ -126,7 +126,8 @@
         no_movement: { icon: 'bi-pause-circle-fill', cls: 'tint-amber', title: 'Not moving' },
         gps_off: { icon: 'bi-geo-alt', cls: 'tint-red', title: 'GPS turned off' },
         offline: { icon: 'bi-wifi-off', cls: 'tint-red', title: 'No internet / signal' },
-        battery_low: { icon: 'bi-battery-half', cls: 'tint-amber', title: 'Battery low' }
+        battery_low: { icon: 'bi-battery-half', cls: 'tint-amber', title: 'Battery low' },
+        phone_off: { icon: 'bi-power', cls: 'tint-red', title: 'Phone switched off' }
     };
     const EXT_KEY = 'sa_last_ext_id';
     const LEAVE_KEY = 'sa_last_leave_id';
@@ -235,6 +236,15 @@
             if (!first) console.warn('Alert poll failed', e.message);
         }
         first = false;
+    }
+
+    // ---- Jatta Security Android app: push notifications for this admin, printing ----
+    if (window.JattaApp && document.getElementById('alertBell')) {
+        window.__jattaPushToken = (token) => {
+            if (token) APP.api('api/push/register.php', { body: { token, as: 'admin', app_version: window.JattaApp.appVersion() } }).catch(() => { });
+        };
+        try { window.JattaApp.getPushToken('__jattaPushToken'); } catch (e) { }
+        window.print = () => { try { window.JattaApp.printPage(document.title); } catch (e) { } };
     }
 
     if (document.getElementById('alertBell')) {

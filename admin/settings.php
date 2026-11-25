@@ -84,6 +84,63 @@ if (is_post()) {
         redirect('admin/settings.php?tab=admins');
     }
 
+    if ($isSuper && $action === 'push_config') {
+        foreach (['fcm_project_id' => '/^[a-z0-9\-]{4,40}$/', 'fcm_api_key' => '/^[A-Za-z0-9_\-]{20,60}$/',
+                  'fcm_app_id' => '/^\d+:\d+:android:[a-f0-9]+$/', 'fcm_sender_id' => '/^\d{5,20}$/'] as $k => $re) {
+            $v = trim((string)($_POST[$k] ?? ''));
+            if ($v !== '' && !preg_match($re, $v)) {
+                flash('danger', 'That does not look like a valid ' . ['fcm_project_id' => 'Project ID', 'fcm_api_key' => 'API key', 'fcm_app_id' => 'App ID (it looks like 1:1234…:android:abcd…)', 'fcm_sender_id' => 'Sender ID (numbers only)'][$k] . '.');
+                redirect('admin/settings.php?tab=notifications');
+            }
+            save_setting($k, $v);
+        }
+        log_activity('settings.push_config');
+        flash('success', 'Firebase app settings saved.');
+        redirect('admin/settings.php?tab=notifications');
+    }
+
+    if ($isSuper && $action === 'push_key') {
+        $f = $_FILES['fcm_key'] ?? null;
+        $j = $f && $f['error'] === UPLOAD_ERR_OK && $f['size'] < 20000 ? json_decode((string)file_get_contents($f['tmp_name']), true) : null;
+        if (!is_array($j) || ($j['type'] ?? '') !== 'service_account' || empty($j['private_key']) || empty($j['client_email']) || empty($j['project_id'])) {
+            flash('danger', 'Upload the service-account key file (.json) downloaded from Firebase > Project settings > Service accounts.');
+        } elseif (setting('fcm_project_id') !== '' && $j['project_id'] !== setting('fcm_project_id')) {
+            flash('danger', 'This key belongs to Firebase project "' . $j['project_id'] . '", but the Project ID saved above is "' . setting('fcm_project_id') . '".');
+        } elseif (@file_put_contents(FCM_SA_FILE, json_encode($j)) === false) {
+            flash('danger', 'Could not save the key: the storage folder is not writable.');
+        } else {
+            @chmod(FCM_SA_FILE, 0600);
+            save_setting('fcm_access_token', '');
+            log_activity('settings.push_key', $j['client_email']);
+            flash('success', 'Service-account key saved (kept privately on the server).');
+        }
+        redirect('admin/settings.php?tab=notifications');
+    }
+
+    if ($isSuper && $action === 'push_key_remove') {
+        @unlink(FCM_SA_FILE);
+        save_setting('fcm_access_token', '');
+        flash('success', 'Key removed. Push notifications are off.');
+        redirect('admin/settings.php?tab=notifications');
+    }
+
+    if ($action === 'push_test') {
+        $devices = q_all("SELECT token FROM push_devices WHERE user_type = 'admin' AND user_id = ?", [$admin['id']]);
+        if (!push_ready()) {
+            flash('danger', 'Push is not set up yet: fill in the Firebase values and upload the key first.');
+        } elseif (!$devices) {
+            flash('warning', 'No phone is registered for you yet. Open the Jatta Security app on your phone and log in as admin, then try again.');
+        } else {
+            $ok = 0;
+            foreach ($devices as $d) {
+                $ok += fcm_send($d['token'], ['title' => '✅ Test notification', 'body' => 'Push notifications are working for ' . company_name() . '.',
+                    'url' => 'admin/index.php', 'channel' => 'alerts', 'tag' => 'test', 'badge' => admin_badge_count()]) === 'ok' ? 1 : 0;
+            }
+            flash($ok ? 'success' : 'danger', $ok ? "Sent to $ok phone(s). Check your notification bar." : 'Sending failed. Check the Firebase values and key (details are in storage/php-errors.log).');
+        }
+        redirect('admin/settings.php?tab=notifications');
+    }
+
     if ($isSuper && $action === 'run_maintenance') {
         run_maintenance();
         flash('success', 'Cleanup finished: old location history purged and forgotten shifts closed.');
@@ -105,7 +162,7 @@ $activeNav = 'settings';
 require APP_ROOT . '/includes/layout/header.php';
 ?>
 <ul class="nav nav-tabs mb-3">
-    <?php foreach (['company' => 'Company & billing', 'tracking' => 'Tracking', 'admins' => 'Admin users', 'account' => 'My account', 'activity' => 'Activity log'] as $k => $lbl):
+    <?php foreach (['company' => 'Company & billing', 'tracking' => 'Tracking', 'notifications' => 'Notifications', 'admins' => 'Admin users', 'account' => 'My account', 'activity' => 'Activity log'] as $k => $lbl):
         if ($k === 'admins' && !$isSuper) continue; ?>
         <li class="nav-item"><a class="nav-link<?= $tab === $k ? ' active' : '' ?>" href="?tab=<?= $k ?>"><?= $lbl ?></a></li>
     <?php endforeach; ?>
@@ -216,6 +273,51 @@ require APP_ROOT . '/includes/layout/header.php';
         </div></div>
     </div>
 </div>
+
+<?php elseif ($tab === 'notifications'):
+    $pc = push_public_config();
+    $sa = fcm_service_account();
+    $devCounts = q_one("SELECT COALESCE(SUM(user_type = 'admin'), 0) admins, COALESCE(SUM(user_type = 'guard'), 0) guards FROM push_devices");
+    $mine = (int)q_val("SELECT COUNT(*) FROM push_devices WHERE user_type = 'admin' AND user_id = ?", [$admin['id']]); ?>
+<div class="card mb-3" style="max-width:900px"><div class="card-body">
+    <h2 class="fs-6 fw-bold">Phone notifications (Jatta Security app)</h2>
+    <p class="small text-muted mb-2">SOS, late, no signal, battery low, phone switched off, leave and extra-hours requests arrive on admins' phones like WhatsApp messages — even when the app is closed — with a count on the app icon. Guards get approvals and handovers.</p>
+    <div class="d-flex flex-wrap gap-2 mb-1">
+        <span class="badge badge-soft-<?= $pc ? 'success' : 'secondary' ?>">App values <?= $pc ? 'saved' : 'missing' ?></span>
+        <span class="badge badge-soft-<?= $sa ? 'success' : 'secondary' ?>">Server key <?= $sa ? 'uploaded' : 'missing' ?></span>
+        <span class="badge badge-soft-<?= push_ready() ? 'success' : 'warning' ?>"><?= push_ready() ? 'Push is ON' : 'Push is OFF' ?></span>
+        <span class="badge badge-soft-primary"><?= (int)$devCounts['admins'] ?> admin phone(s) · <?= (int)$devCounts['guards'] ?> guard phone(s)</span>
+    </div>
+</div></div>
+
+<?php if ($isSuper): ?>
+<div class="card mb-3" style="max-width:900px"><div class="card-body">
+    <h3 class="fs-6 fw-bold">1. Firebase app values</h3>
+    <p class="small text-muted">In <a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase console</a>: create a project → <em>Project settings</em> → add an <strong>Android app</strong> with package name <code>com.jattamkommerce.security.guard</code> → copy these values (they are also inside the <code>google-services.json</code> file it offers).</p>
+    <form method="post" class="row g-2"><?= csrf_field() ?><input type="hidden" name="action" value="push_config">
+        <div class="col-md-6"><label class="form-label small">Project ID</label><input name="fcm_project_id" class="form-control" value="<?= $s('fcm_project_id') ?>" placeholder="jatta-security-12ab3"></div>
+        <div class="col-md-6"><label class="form-label small">Sender ID (project number)</label><input name="fcm_sender_id" class="form-control" value="<?= $s('fcm_sender_id') ?>" placeholder="123456789012"></div>
+        <div class="col-md-6"><label class="form-label small">App ID</label><input name="fcm_app_id" class="form-control" value="<?= $s('fcm_app_id') ?>" placeholder="1:123456789012:android:abc123…"></div>
+        <div class="col-md-6"><label class="form-label small">Web API key</label><input name="fcm_api_key" class="form-control" value="<?= $s('fcm_api_key') ?>" placeholder="AIza…"></div>
+        <div class="col-12"><button class="btn btn-primary">Save app values</button></div>
+    </form>
+</div></div>
+<div class="card mb-3" style="max-width:900px"><div class="card-body">
+    <h3 class="fs-6 fw-bold">2. Server key (private)</h3>
+    <p class="small text-muted">Firebase → <em>Project settings</em> → <em>Service accounts</em> → <strong>Generate new private key</strong>. Upload the downloaded .json file here. It is stored privately on the server and is never shown again. Do not email it or put it on GitHub.</p>
+    <?php if ($sa): ?><p class="small mb-2"><i class="bi bi-check-circle-fill text-success"></i> Key for <code><?= e($sa['client_email']) ?></code></p><?php endif; ?>
+    <form method="post" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center"><?= csrf_field() ?><input type="hidden" name="action" value="push_key">
+        <input type="file" name="fcm_key" accept="application/json,.json" class="form-control" style="max-width:360px" required>
+        <button class="btn btn-primary"><?= $sa ? 'Replace key' : 'Upload key' ?></button>
+    </form>
+    <?php if ($sa): ?><form method="post" class="mt-2" data-confirm="Remove the key? Push notifications will stop."><?= csrf_field() ?><input type="hidden" name="action" value="push_key_remove"><button class="btn btn-link btn-sm text-danger p-0">Remove key</button></form><?php endif; ?>
+</div></div>
+<?php endif; ?>
+<div class="card" style="max-width:900px"><div class="card-body">
+    <h3 class="fs-6 fw-bold">3. Test</h3>
+    <p class="small text-muted">Log in as admin in the Jatta Security app on your phone (it registers automatically; <?= $mine ?> phone(s) registered for you), then:</p>
+    <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="push_test"><button class="btn btn-success" <?= push_ready() ? '' : 'disabled' ?>><i class="bi bi-bell"></i> Send test notification to my phone</button></form>
+</div></div>
 
 <?php elseif ($tab === 'account'): ?>
 <div class="card" style="max-width:520px"><div class="card-header">Change password</div><div class="card-body">

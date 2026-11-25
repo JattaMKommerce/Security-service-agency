@@ -20,6 +20,9 @@
     let lastSentAt = 0;
     let busy = false;
     let gpsState = 'unknown';    // ok | off | denied — reported to the control room
+    // Inside the Jatta Security Android app the phone itself tracks in the background (screen off too).
+    const NATIVE = window.JattaApp || null;
+    let nativeStarting = false;
     let lastFixAt = 0;
 
     // ---------- helpers ----------
@@ -158,6 +161,7 @@
         $('offBanner').classList.toggle('d-none', !state.today_off || on);
         $('offBannerText').textContent = (state.today_off || '') + ' You can still start duty if your supervisor asked you to.';
         renderLeaves();
+        syncNative();
         $('trackInfo').classList.toggle('d-none', !(on || state.sos));
         $('outsideWarn').classList.toggle('d-none', !(on && state.outside));
 
@@ -262,6 +266,12 @@
 
     function updateTrackText() {
         if (!state || !(state.shift || state.sos)) return;
+        if (nativeTracking()) {
+            let info = {};
+            try { info = JSON.parse(NATIVE.trackingInfo() || '{}'); } catch (e) { }
+            $('trackText').textContent = 'Live location ON · works with screen off' + (info.last_sent_ago ? ' · sent ' + info.last_sent_ago : '') + (info.pending > 1 ? ' · ' + info.pending + ' waiting' : '');
+            return;
+        }
         const pending = queue.length;
         const ago = lastSentAt ? Math.round((Date.now() - lastSentAt) / 1000) + 's ago' : 'not yet';
         $('trackText').textContent = 'Live location ON · last sent ' + ago + (pending > 1 ? ' · ' + pending + ' waiting' : '') +
@@ -336,8 +346,11 @@
         }
     }
 
+    function nativeTracking() { try { return !!(NATIVE && NATIVE.isTracking()); } catch (e) { return false; } }
+
     async function tick() {
         if (!state || !(state.shift || state.sos)) return;
+        if (nativeTracking() && !state.sos) { flush(); updateTrackText(); return; }   // the app's background service sends GPS
         let fix = lastFix;
         if (!fix || Date.now() - fix.ts > intervalMs()) {
             fix = await freshFix(intervalMs(), Math.min(15000, intervalMs()));
@@ -389,6 +402,8 @@
     }
     window.addEventListener('online', () => { $('netBanner').classList.add('d-none'); flush(); refresh(); });
     window.addEventListener('offline', () => $('netBanner').classList.remove('d-none'));
+    // The Android app tells the page when it comes back on screen (permissions may have changed).
+    window.addEventListener('jattaapp:resume', () => { startWatch(); refresh(); });
 
     // ---------- screen wake lock ----------
     async function keepAwake() {
@@ -434,6 +449,7 @@
             if (selfie) body.selfie = selfie;
             const r = await api(ending ? 'api/guard/checkout.php' : 'api/guard/checkin.php', body);
             state = r;
+            if (ending) nativeStop(); else nativeStart();
             vibrate(120);
             toast(r.message || (ending ? 'Duty ended' : 'Duty started'), 6000);
             return true;
@@ -529,8 +545,57 @@
     $('logoutForm').addEventListener('submit', (e) => {
         const msg = state && state.shift ? 'Logging out will END your duty and stop location sharing. Continue?' : 'Log out of the guard app?';
         if (!confirm(msg)) e.preventDefault();
-        else { try { localStorage.removeItem(QKEY); } catch (x) { } }
+        else { try { localStorage.removeItem(QKEY); } catch (x) { } nativeStop(); }
     });
+
+    // ---------- native app: background tracking, push, phone setup ----------
+    async function nativeStart() {
+        if (!NATIVE || nativeStarting || !state || !state.shift) return;
+        nativeStarting = true;
+        try {
+            const t = await api('api/guard/device_token.php', {});
+            NATIVE.startTracking(JSON.stringify({ base: t.base, token: t.token, interval_sec: t.interval_sec, name: t.name }));
+        } catch (e) { toast('Background tracking could not start: ' + e.message, 6000); }
+        finally { nativeStarting = false; }
+    }
+    function nativeStop() { try { if (NATIVE) NATIVE.stopTracking(); } catch (e) { } }
+    /** Keeps the phone's background service in step with the duty state (e.g. after the app restarts or the control room ends a shift). */
+    function syncNative() {
+        if (!NATIVE) {
+            $('newAppBanner').classList.toggle('d-none', !/Android/i.test(navigator.userAgent));
+            return;
+        }
+        if (state.shift && !nativeTracking()) nativeStart();
+        if (!state.shift && !state.sos && nativeTracking()) nativeStop();
+        renderSetup();
+    }
+    const SETUP_TEXT = {
+        location: ['bi-geo-alt-fill', 'Location permission', 'Allow location (choose "Allow all the time" if asked).'],
+        notifications: ['bi-bell-fill', 'Notifications', 'Allow notifications so the "On duty" notice and approvals show.'],
+        battery: ['bi-battery-charging', 'Battery: No restrictions', 'Stops the phone from closing the app to save battery.'],
+        gps: ['bi-broadcast', 'GPS / Location turned on', 'Turn on Location in the phone\'s quick settings.']
+    };
+    function renderSetup() {
+        let st = {};
+        try { st = JSON.parse(NATIVE.setupStatus() || '{}'); } catch (e) { return; }
+        const todo = Object.keys(SETUP_TEXT).filter((k) => st[k] === false);
+        $('setupCard').classList.toggle('d-none', !todo.length);
+        const html = todo.map((k) => '<div class="g-setup-item"><i class="bi ' + SETUP_TEXT[k][0] + ' text-warning"></i><div><div class="fw-semibold">' + SETUP_TEXT[k][1] +
+            '</div><div class="small text-muted">' + SETUP_TEXT[k][2] + '</div></div><button class="btn btn-sm btn-warning fw-semibold" data-setup="' + k + '">Fix</button></div>').join('') +
+            (st.brand_hint ? '<div class="small text-muted mt-2"><i class="bi bi-info-circle"></i> ' + esc(st.brand_hint) + '</div>' : '');
+        if ($('setupList').innerHTML !== html) $('setupList').innerHTML = html;
+    }
+    document.addEventListener('click', (ev) => {
+        const b = ev.target.closest('[data-setup]');
+        if (b && NATIVE) NATIVE.openSetup(b.dataset.setup);
+    });
+    function registerPush() {
+        if (!NATIVE) return;
+        window.__jattaPushToken = (token) => {
+            if (token) api('api/push/register.php', { token, as: 'guard', app_version: NATIVE.appVersion() }).catch(() => { });
+        };
+        try { NATIVE.getPushToken('__jattaPushToken'); } catch (e) { }
+    }
 
     // ---------- bottom sheets ----------
     function openSheet(id) { $(id).classList.add('open'); $(id).setAttribute('aria-hidden', 'false'); }
@@ -655,6 +720,7 @@
             if (fix) Object.assign(body, { lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy });
             await flush();
             state = await api('api/guard/handover.php', body);
+            nativeStop();
             $('handNotes').value = ''; $('handOther').value = '';
             closeSheet('sheetHand'); vibrate(120); toast(state.message, 6000); render();
         } catch (e) { toast(e.message, 5000); }
@@ -805,5 +871,5 @@
     if ('serviceWorker' in navigator) navigator.serviceWorker.register(G.sw).catch(() => { });
 
     startWatch();
-    refresh().then(flush);
+    refresh().then(() => { flush(); registerPush(); });
 })();

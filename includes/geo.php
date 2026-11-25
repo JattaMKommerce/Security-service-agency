@@ -85,6 +85,43 @@ function record_guard_location(array $guard, float $lat, float $lng, ?float $acc
 }
 
 /**
+ * Saves a batch of GPS points sent by the guard app (browser or native background service).
+ * $in: { points: [ {lat, lng, accuracy, speed, heading, battery, ts(ms)} ] } or a single point.
+ * Points queued while offline are accepted for up to 12 hours.
+ * @return array{accepted: int, last: ?array}
+ */
+function ingest_location_points(array $guard, array $in): array
+{
+    $points = isset($in['points']) && is_array($in['points']) ? array_slice($in['points'], 0, 100) : [$in];
+    usort($points, fn($a, $b) => (float)(is_array($a) ? ($a['ts'] ?? 0) : 0) <=> (float)(is_array($b) ? ($b['ts'] ?? 0) : 0));
+    $accepted = 0;
+    $last = null;
+    foreach ($points as $pt) {
+        if (!is_array($pt) || !valid_coords($pt['lat'] ?? null, $pt['lng'] ?? null)) continue;
+        $lat = (float)$pt['lat'];
+        $lng = (float)$pt['lng'];
+        $acc = isset($pt['accuracy']) && is_numeric($pt['accuracy']) ? max(0, min(100000, (float)$pt['accuracy'])) : null;
+        // Ignore wildly inaccurate fixes (e.g. cell-tower only) for history.
+        if ($acc !== null && $acc > 2000) continue;
+        $ts = null;
+        if (isset($pt['ts']) && is_numeric($pt['ts'])) {
+            $sec = (int)floor((float)$pt['ts'] / 1000);
+            if ($sec <= time() + 60 && $sec >= time() - 12 * 3600) {
+                $ts = date('Y-m-d H:i:s', min($sec, time()));
+            }
+        }
+        $speed = isset($pt['speed']) && is_numeric($pt['speed']) && $pt['speed'] >= 0 ? min(150.0, (float)$pt['speed']) : null;
+        $heading = isset($pt['heading']) && is_numeric($pt['heading']) ? fmod((float)$pt['heading'], 360) : null;
+        $battery = isset($pt['battery']) && is_numeric($pt['battery']) ? max(0, min(100, (int)$pt['battery'])) : null;
+        // Re-read duty state each time (it can change between queued points).
+        $g = q_one('SELECT * FROM guards WHERE id = ?', [$guard['id']]);
+        $last = record_guard_location($g, $lat, $lng, $acc, $speed, $heading, $battery, $ts);
+        $accepted++;
+    }
+    return ['accepted' => $accepted, 'last' => $last];
+}
+
+/**
  * Raises a "left site" alert when an on-duty guard goes outside the client
  * site radius, and resolves it automatically when they return.
  */
@@ -107,6 +144,7 @@ function geofence_check(array $guard, array $assignment, float $lat, float $lng,
            VALUES (\'geofence_exit\', ?, ?, ?, ?, ?, ?, ?, \'open\', ?)',
           [$guard['id'], $assignment['id'], $assignment['client_id'], $lat, $lng, (int)round($dist),
            sprintf('%s is %d m away from %s (allowed %d m)', $guard['full_name'], (int)round($dist), $assignment['site_name'], $radius), now()]);
+        notify_alert((int)db()->lastInsertId());
         $alert = 'geofence_exit';
     } elseif ($inside && $open) {
         q('UPDATE alerts SET status = \'resolved\', resolved_at = ?, resolution_note = \'Guard returned to site (automatic)\' WHERE id = ?',
@@ -286,7 +324,7 @@ function end_shift(int $guardId, ?float $lat, ?float $lng, ?int $adminId = null,
           [$out, $lat, $lng, $dist, $mins, $ot, $otOk, $adminId, $note, $shift['id']]);
         q('UPDATE guards SET is_on_duty = 0 WHERE id = ?', [$guardId]);
         // Leaving duty clears the shift's "left site" and tracking-health alerts.
-        resolve_guard_alerts($guardId, ['geofence_exit', 'offline', 'gps_off', 'no_movement', 'battery_low'], 'Shift ended');
+        resolve_guard_alerts($guardId, ['geofence_exit', 'offline', 'gps_off', 'no_movement', 'battery_low', 'phone_off'], 'Shift ended');
         // A request still waiting for approval no longer applies.
         q("UPDATE duty_extensions SET status = 'cancelled', admin_note = COALESCE(admin_note, 'Shift ended before a decision')
             WHERE attendance_id = ? AND status = 'pending'", [$shift['id']]);

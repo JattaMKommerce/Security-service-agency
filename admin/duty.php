@@ -23,6 +23,7 @@ if (is_post()) {
             q('UPDATE duty_extensions SET status = ?, approved_minutes = ?, decided_by = ?, decided_at = ?, admin_note = ? WHERE id = ? AND status = \'pending\'',
               [$approve ? 'approved' : 'rejected', $mins, $admin['id'], now(), $note, $id]);
             log_activity('duty.extension_' . ($approve ? 'approve' : 'reject'), $x['full_name'] . ($approve ? ' +' . fmt_minutes($mins) : '') . ($note ? ': ' . $note : ''));
+            notify_guard((int)$x['guard_id'], $approve ? '✅ Extra ' . fmt_minutes($mins) . ' approved' : '❌ Extra hours not approved', $note ?: ($approve ? 'You can stay on duty for the extra time.' : 'Please end your duty at shift time.'), 'ext');
             flash('success', $approve ? 'Extra ' . fmt_minutes($mins) . ' approved for ' . $x['full_name'] . '. The guard is notified in the app.' : 'Request rejected. The guard is notified in the app.');
         }
         redirect('admin/duty.php?tab=requests');
@@ -38,6 +39,8 @@ if (is_post()) {
             q("UPDATE guard_leaves SET status = ?, decided_by = ?, decided_at = ?, admin_note = ? WHERE id = ? AND status = 'pending'",
               [$approve ? 'approved' : 'rejected', $admin['id'], now(), post_str('note', 255), $id]);
             log_activity('leave.' . ($approve ? 'approve' : 'reject'), $l['full_name'] . ' ' . $l['from_date'] . '–' . $l['to_date']);
+            $ld = fmt_date($l['from_date'], 'd M') . ($l['to_date'] !== $l['from_date'] ? ' – ' . fmt_date($l['to_date'], 'd M') : '');
+            notify_guard((int)$l['guard_id'], ($approve ? '✅ Leave approved: ' : '❌ Leave not approved: ') . $ld, post_str('note', 255) ?? leave_type_label($l['leave_type']), 'leave');
             flash('success', 'Leave ' . ($approve ? 'approved' : 'rejected') . ' for ' . $l['full_name'] . '. The guard sees it in the app.');
         }
         redirect('admin/duty.php?tab=leave');
@@ -63,6 +66,7 @@ if (is_post()) {
             q("INSERT INTO guard_leaves (guard_id, from_date, to_date, leave_type, reason, status, requested_by, created_at, decided_by, decided_at)
                VALUES (?, ?, ?, ?, ?, 'approved', 'admin', ?, ?, ?)", [$gid, $from, $to, $type, post_str('reason', 255), now(), $admin['id'], now()]);
             log_activity('leave.add', $g['full_name'] . ' ' . $from . '–' . $to . ' ' . $type);
+            notify_guard($gid, '📅 Leave added: ' . fmt_date($from, 'd M') . ($to !== $from ? ' – ' . fmt_date($to, 'd M') : ''), leave_type_label($type) . ' recorded by the control room.', 'leave');
             flash('success', 'Leave added for ' . $g['full_name'] . ' (' . fmt_date($from, 'd M') . ($to !== $from ? ' – ' . fmt_date($to, 'd M') : '') . ').');
         }
         redirect('admin/duty.php?tab=leave');

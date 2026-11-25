@@ -32,4 +32,5 @@ if (q_val("SELECT id FROM duty_extensions WHERE attendance_id = ? AND status = '
 q("INSERT INTO duty_extensions (guard_id, attendance_id, assignment_id, requested_minutes, reason, status, requested_at)
    VALUES (?, ?, ?, ?, ?, 'pending', ?)", [$gid, $shift['id'], $shift['assignment_id'], $minutes, mb_substr($reason, 0, 255), now()]);
 log_activity('duty.extension_request', fmt_minutes($minutes) . ': ' . $reason);
+notify_admins_request('⏳ Extra hours: ' . $guard['full_name'], '+' . fmt_minutes($minutes) . ' — ' . $reason, 'admin/duty.php?tab=requests', 'ext-' . $shift['id']);
 json_out(guard_state($guard) + ['message' => 'Request sent. You will see the decision here.']);

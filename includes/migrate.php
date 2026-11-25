@@ -7,7 +7,7 @@ declare(strict_types=1);
  * database/schema.sql always holds the full, current schema for new installs.
  */
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function maybe_migrate(): void
 {
@@ -33,6 +33,11 @@ function maybe_migrate(): void
         if ($current < 4) {
             migrate_to_4();
             save_setting('schema_version', '4');
+            $current = 4;
+        }
+        if ($current < 5) {
+            migrate_to_5();
+            save_setting('schema_version', '5');
         }
     } catch (Throwable $e) {
         error_log('Database upgrade failed: ' . $e->getMessage());
@@ -158,4 +163,27 @@ function migrate_to_4(): void
 {
     db()->exec("ALTER TABLE alerts MODIFY type ENUM('sos','geofence_exit','late','no_movement','gps_off','offline','battery_low') NOT NULL");
     q("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('battery_alert_pct', '15')");
+}
+
+const PUSH_DEVICES_SQL = <<<'SQL'
+CREATE TABLE IF NOT EXISTS push_devices (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_type       ENUM('admin','guard') NOT NULL,
+    user_id         INT UNSIGNED NOT NULL,
+    token           VARCHAR(255) NOT NULL,
+    platform        VARCHAR(20) NOT NULL DEFAULT 'android',
+    app_version     VARCHAR(20) NULL,
+    created_at      DATETIME NOT NULL,
+    last_seen_at    DATETIME NOT NULL,
+    UNIQUE KEY uq_push_token (token),
+    KEY idx_push_user (user_type, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SQL;
+
+/** v5: native app — per-phone tracking token, push notification devices, "phone switching off" alert. */
+function migrate_to_5(): void
+{
+    db_add_columns('guards', ['device_token_hash' => 'CHAR(64) NULL']);
+    db()->exec("ALTER TABLE alerts MODIFY type ENUM('sos','geofence_exit','late','no_movement','gps_off','offline','battery_low','phone_off') NOT NULL");
+    db()->exec(PUSH_DEVICES_SQL);
 }

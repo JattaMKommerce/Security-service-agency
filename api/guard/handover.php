@@ -52,6 +52,7 @@ if ($action === 'create') {
     }
     $r = end_shift($gid, $lat, $lng, null, 'Handed over to ' . $incoming['full_name']);
     log_activity('duty.handover', 'to ' . $incoming['full_name'] . ($items ? ': ' . implode(', ', $items) : ''));
+    notify_guard((int)$incoming['id'], '🔁 Duty handed over to you', $guard['full_name'] . ' handed over' . ($asg ? ' at ' . $asg['site_name'] : '') . '. Open the app to check and accept.', 'handover');
     $g = q_one('SELECT * FROM guards WHERE id = ?', [$gid]);
     json_out(guard_state($g) + ['message' => 'Duty handed over to ' . $incoming['full_name'] . '. Duty ended' . ($r ? ' (' . fmt_minutes($r['duration_minutes']) . ')' : '') . '.']);
 }
@@ -67,6 +68,7 @@ if ($action === 'respond') {
     q('UPDATE shift_handovers SET status = ?, responded_at = ?, incoming_note = ?, incoming_attendance_id = ? WHERE id = ?',
       [$dispute ? 'disputed' : 'accepted', now(), $note !== '' ? $note : null, $shift['id'] ?? null, $hid]);
     log_activity('duty.handover_' . ($dispute ? 'dispute' : 'accept'), 'handover #' . $hid . ($note !== '' ? ': ' . $note : ''));
+    if ($dispute) notify_admins_request('⚠️ Handover problem: ' . $guard['full_name'], $note, 'admin/duty.php?tab=handovers', 'handover-' . $hid);
     json_out(guard_state($guard) + ['message' => $dispute ? 'Reported to the control room.' : 'Handover accepted.']);
 }
 

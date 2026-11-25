@@ -11,3 +11,4 @@ storage/selfies/
 *.keystore
 *.jks
 signing-key-info.txt
+storage/fcm-service-account.json

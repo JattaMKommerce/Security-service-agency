@@ -18,7 +18,7 @@ DirectoryIndex index.php
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
     # Block direct access to private folders
-    RewriteRule ^(config|includes|database|storage)(/|$) - [F,L]
+    RewriteRule ^(config|includes|database|storage|android)(/|$) - [F,L]
 </IfModule>
 
 # App signing keys must never be downloadable (they let anyone sign a fake app update)

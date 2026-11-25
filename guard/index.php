@@ -35,6 +35,18 @@ $title = 'Duty';
         <button class="btn btn-light w-100 mt-3 fw-semibold" id="sosCancel"><i class="bi bi-check-circle"></i> I am safe — cancel SOS</button>
     </section>
 
+    <!-- Old app / browser: ask to install the new app (background tracking) -->
+    <a id="newAppBanner" href="<?= url('guard/install.php') ?>" class="g-banner g-banner-new d-none text-decoration-none">
+        <i class="bi bi-phone-fill"></i>
+        <span><strong>Install the new Jatta Security app.</strong> Your location keeps working when the screen is off — no need to keep the app open. Tap to install.</span>
+    </a>
+
+    <!-- New app: phone settings needed for background tracking -->
+    <section id="setupCard" class="g-card g-setup d-none">
+        <div class="g-label"><i class="bi bi-tools"></i> Phone setup — needed for tracking with the screen off</div>
+        <div id="setupList"></div>
+    </section>
+
     <div id="offBanner" class="g-banner g-banner-info d-none"><i class="bi bi-cup-hot"></i> <span id="offBannerText"></span></div>
 
     <!-- Incoming handover waiting for this guard -->

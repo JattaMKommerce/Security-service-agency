@@ -90,6 +90,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/geo.php';
 require_once __DIR__ . '/duty.php';
+require_once __DIR__ . '/push.php';
 require_once __DIR__ . '/migrate.php';
 
 if (is_file(APP_ROOT . '/storage/installed.lock')) {

@@ -7,7 +7,7 @@ declare(strict_types=1);
  * health checks (no signal / GPS off / not moving / late) and duty selfies.
  */
 
-const ALERT_TYPES = ['sos', 'geofence_exit', 'late', 'no_movement', 'gps_off', 'offline', 'battery_low'];
+const ALERT_TYPES = ['sos', 'geofence_exit', 'late', 'no_movement', 'gps_off', 'offline', 'battery_low', 'phone_off'];
 const EARLY_CHECKIN_SEC = 3 * 3600;      // a check-in this long before shift start still counts for that shift
 const STILL_RADIUS_M = 30;               // "not moving" = every point stays within this distance
 const PATROL_MIN_SPEED = 1.0;            // m/s (about 3.6 km/h, walking pace)
@@ -24,6 +24,7 @@ function alert_type_meta(string $type): array
         'gps_off'       => ['GPS Turned Off',      'bi-geo-alt',                  'danger'],
         'offline'       => ['No Internet / Signal', 'bi-wifi-off',                'danger'],
         'battery_low'   => ['Battery Low',         'bi-battery-half',             'warning'],
+        'phone_off'     => ['Phone Switched Off',  'bi-power',                    'danger'],
     ][$type] ?? [label($type), 'bi-bell-fill', 'secondary'];
 }
 
@@ -285,6 +286,7 @@ function open_guard_alert(string $type, array $guard, ?array $asg, ?float $lat, 
     q("INSERT INTO alerts (type, guard_id, assignment_id, client_id, lat, lng, message, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?)",
       [$type, $guard['id'], $asg['id'] ?? null, $asg['client_id'] ?? null, $lat, $lng, mb_substr($message, 0, 255), now()]);
+    notify_alert((int)db()->lastInsertId());
     return true;
 }
 
@@ -342,7 +344,7 @@ function run_live_checks(): void
     // Off-duty guards can't have duty-health alerts.
     q("UPDATE alerts al JOIN guards g ON g.id = al.guard_id
           SET al.status = 'resolved', al.resolved_at = ?, al.resolution_note = 'Guard is off duty'
-        WHERE g.is_on_duty = 0 AND al.type IN ('offline','gps_off','no_movement','battery_low') AND al.status <> 'resolved'", [now()]);
+        WHERE g.is_on_duty = 0 AND al.type IN ('offline','gps_off','no_movement','battery_low','phone_off') AND al.status <> 'resolved'", [now()]);
 
     $guards = q_all("SELECT g.*, at.id AS att_id, at.check_in_at
                        FROM guards g LEFT JOIN attendance at ON at.guard_id = g.id AND at.status = 'open'
@@ -369,7 +371,7 @@ function run_live_checks(): void
                 open_guard_alert('offline', $g, $asg, $lat, $lng,
                     sprintf('No signal from %s\'s phone for %d min%s — mobile internet off, phone switched off, or app closed', $g['full_name'], $mins, $where));
             } elseif ($online) {
-                resolve_guard_alerts($gid, ['offline'], 'Phone is back online (automatic)');
+                resolve_guard_alerts($gid, ['offline', 'phone_off'], 'Phone is back online (automatic)');
             }
 
             // 2) GPS / location permission off

@@ -1,0 +1,11 @@
+.gradle/
+build/
+app/build/
+local.properties
+# Signing passwords live outside the repo (see README). Never commit keys.
+keystore.properties
+*.jks
+*.keystore
+google-services.json
+.idea/
+*.iml

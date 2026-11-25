@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS guards (
     gps_state               ENUM('ok','off','denied','unknown') NOT NULL DEFAULT 'unknown',
     gps_state_at            DATETIME NULL,
     weekly_off              VARCHAR(20) NULL,
+    device_token_hash       CHAR(64) NULL,
     remember_hash           CHAR(64) NULL,
     remember_expires        DATETIME NULL,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -165,7 +166,7 @@ CREATE TABLE IF NOT EXISTS guard_locations (
 
 CREATE TABLE IF NOT EXISTS alerts (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    type                ENUM('sos','geofence_exit','late','no_movement','gps_off','offline','battery_low') NOT NULL,
+    type                ENUM('sos','geofence_exit','late','no_movement','gps_off','offline','battery_low','phone_off') NOT NULL,
     guard_id            INT UNSIGNED NOT NULL,
     assignment_id       INT UNSIGNED NULL,
     client_id           INT UNSIGNED NULL,
@@ -329,6 +330,19 @@ CREATE TABLE IF NOT EXISTS guard_leaves (
     CONSTRAINT fk_leave_guard FOREIGN KEY (guard_id) REFERENCES guards(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS push_devices (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_type       ENUM('admin','guard') NOT NULL,
+    user_id         INT UNSIGNED NOT NULL,
+    token           VARCHAR(255) NOT NULL,
+    platform        VARCHAR(20) NOT NULL DEFAULT 'android',
+    app_version     VARCHAR(20) NULL,
+    created_at      DATETIME NOT NULL,
+    last_seen_at    DATETIME NOT NULL,
+    UNIQUE KEY uq_push_token (token),
+    KEY idx_push_user (user_type, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
@@ -358,4 +372,4 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
     ('ot_min_minutes',          '15'),
     ('no_movement_min',         '60'),
     ('battery_alert_pct',       '15'),
-    ('schema_version',          '4');
+    ('schema_version',          '5');

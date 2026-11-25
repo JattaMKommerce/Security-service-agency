@@ -33,5 +33,8 @@ if (q_val("SELECT id FROM guard_leaves WHERE guard_id = ? AND status IN ('pendin
 
 q("INSERT INTO guard_leaves (guard_id, from_date, to_date, leave_type, reason, status, requested_by, created_at)
    VALUES (?, ?, ?, ?, ?, 'pending', 'guard', ?)", [$gid, $from, $to, $type, mb_substr($reason, 0, 255), now()]);
+$leaveId = (int)db()->lastInsertId();
 log_activity('leave.request', leave_type_label($type) . ' ' . $from . ($to !== $from ? ' to ' . $to : '') . ': ' . $reason);
+notify_admins_request('📅 Leave request: ' . $guard['full_name'],
+    leave_type_label($type) . ' · ' . fmt_date($from, 'd M') . ($to !== $from ? ' – ' . fmt_date($to, 'd M') : '') . ' — ' . $reason, 'admin/duty.php?tab=leave', 'leave-' . $leaveId);
 json_out(guard_state($guard) + ['message' => 'Leave request sent. You will see the decision in the Attendance tab.']);

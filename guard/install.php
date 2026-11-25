@@ -233,36 +233,50 @@ $title = 'Install Guard Duty App';
 
 <main class="install-container">
     <img src="<?= asset('img/guard-avatar.jpg') ?>" alt="Guard" class="guard-avatar-img">
-    <h1 class="app-title">Guard Duty App</h1>
-    <p class="app-sub">Official GPS Attendance & Duty Tracker</p>
+    <?php
+    // The new app (background tracking + notifications) once it has been uploaded; the old one until then.
+    $newApk = is_file(APP_ROOT . '/downloads/apk/Jatta-Security.apk');
+    $apkFile = $newApk ? 'Jatta-Security.apk' : 'Jatta-Security-Guard.apk';
+    ?>
+    <h1 class="app-title">Jatta Security App</h1>
+    <p class="app-sub">Duty, GPS attendance &amp; alerts — for guards and admins</p>
 
     <!-- 1-Tap APK Download Button -->
-    <a href="<?= url('downloads/apk/Jatta-Security-Guard.apk') ?>" class="btn-apk-main" download="Jatta-Security-Guard.apk">
+    <a href="<?= url('downloads/apk/' . $apkFile) ?>" class="btn-apk-main" download="<?= e($apkFile) ?>">
         <i class="bi bi-android2 fs-5"></i>
-        <span>Download Guard APK (Direct)</span>
+        <span>Download Android App (APK)</span>
     </a>
 
     <!-- 1-Tap Web App Alternative -->
     <button class="btn-pwa-sub" id="pwaTriggerBtn">
         <i class="bi bi-phone"></i>
-        <span>Or Add to Home Screen (Instant)</span>
+        <span>Or Add to Home Screen (screen must stay on during duty)</span>
     </button>
     <div id="pwaStatus" class="small mt-2" style="color: var(--accent-purple);"></div>
 
     <!-- Ultra-simple 2 steps -->
     <div class="steps-box">
+        <?php if ($newApk): ?>
         <div class="step-row">
             <div class="step-num">1</div>
             <div class="step-text">
-                <strong>Download & Install</strong>
-                Tap the button above. When downloaded, tap to install.
+                <strong>Remove the old app</strong>
+                If you have the old <em>Jatta Guard</em> app, uninstall it first (long-press its icon → Uninstall).
+            </div>
+        </div>
+        <?php endif; ?>
+        <div class="step-row">
+            <div class="step-num"><?= $newApk ? 2 : 1 ?></div>
+            <div class="step-text">
+                <strong>Download &amp; Install</strong>
+                Tap the button above. When downloaded, tap to install (allow "Install unknown apps" if asked).
             </div>
         </div>
         <div class="step-row">
-            <div class="step-num">2</div>
+            <div class="step-num"><?= $newApk ? 3 : 2 ?></div>
             <div class="step-text">
-                <strong>Sign In & Start Duty</strong>
-                Open the app and enter your Badge ID or Mobile Number.
+                <strong>Sign In &amp; allow everything</strong>
+                Open the app, sign in with your Badge ID or Mobile Number. Allow <b>Location (all the time)</b>, <b>Notifications</b> and set <b>Battery: No restrictions</b> — the app shows a checklist.
             </div>
         </div>
     </div>

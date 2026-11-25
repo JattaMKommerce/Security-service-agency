@@ -25,6 +25,7 @@ if ($action === 'raise') {
         q("INSERT INTO alerts (type, guard_id, assignment_id, client_id, lat, lng, message, status, created_at)
            VALUES ('sos', ?, ?, ?, ?, ?, ?, 'open', ?)",
           [$gid, $asg['id'] ?? null, $asg['client_id'] ?? null, $lat, $lng, mb_substr($msg, 0, 255), now()]);
+        notify_alert((int)db()->lastInsertId());
         log_activity('alert.sos', $msg);
     }
     json_out(guard_state($guard) + ['message' => 'SOS sent to the control room.']);
