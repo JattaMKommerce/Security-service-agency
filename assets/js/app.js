@@ -128,6 +128,7 @@
         offline: { icon: 'bi-wifi-off', cls: 'tint-red', title: 'No internet / signal' }
     };
     const EXT_KEY = 'sa_last_ext_id';
+    const LEAVE_KEY = 'sa_last_leave_id';
 
     function renderAlertMenu(list) {
         const box = document.getElementById('alertMenuList');
@@ -172,9 +173,19 @@
             const qs = [];
             if (last !== null) qs.push('since_id=' + last);
             if (extLast !== null) qs.push('ext_since=' + extLast);
+            let leaveLast = null;
+            try { const s = sessionStorage.getItem(LEAVE_KEY); if (s !== null) leaveLast = parseInt(s, 10) || 0; } catch (e) { }
+            if (leaveLast !== null) qs.push('leave_since=' + leaveLast);
             const data = await APP.api('api/admin/alerts_poll.php' + (qs.length ? '?' + qs.join('&') : ''));
             setCount(data.open_count);
-            document.querySelectorAll('.js-ext-count').forEach((el) => { el.textContent = data.ext_pending; el.classList.toggle('d-none', !data.ext_pending); });
+            const reqPending = (data.ext_pending || 0) + (data.leave_pending || 0);
+            document.querySelectorAll('.js-ext-count').forEach((el) => { el.textContent = reqPending; el.classList.toggle('d-none', !reqPending); });
+            try { sessionStorage.setItem(LEAVE_KEY, String(Math.max(leaveLast || 0, data.leave_max_id || 0))); } catch (e) { }
+            if (leaveLast !== null && data.leave_new && data.leave_new.length) {
+                data.leave_new.forEach((l) => APP.toast('<strong><i class="bi bi-calendar-x me-1"></i>Leave request: ' + APP.esc(l.guard_name) + '</strong><br>' +
+                    APP.esc(l.type) + ' · ' + APP.esc(l.dates) + '<br><a class="text-white fw-semibold" href="' + APP.url('admin/duty.php?tab=leave') + '">Approve / reject →</a>', 'primary', 15000));
+                APP.beep(false);
+            }
             try { sessionStorage.setItem(EXT_KEY, String(Math.max(extLast || 0, data.ext_max_id || 0))); } catch (e) { }
             if (extLast !== null && data.ext_new && data.ext_new.length) {
                 data.ext_new.forEach((x) => APP.toast('<strong><i class="bi bi-hourglass-split me-1"></i>Extra hours request: ' + APP.esc(x.guard_name) + '</strong><br>+' +

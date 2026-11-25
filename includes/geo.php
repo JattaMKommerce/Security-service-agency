@@ -209,7 +209,8 @@ function guards_live_sql(string $where = '1=1'): string
 {
     return "SELECT g.id, g.employee_code, g.category, g.full_name, g.phone, g.photo, g.status, g.is_on_duty, g.is_armed,
                    g.last_lat, g.last_lng, g.last_accuracy, g.last_speed, g.last_battery, g.last_seen_at,
-                   g.last_ping_at, g.gps_state, g.gps_state_at,
+                   g.last_ping_at, g.gps_state, g.gps_state_at, g.weekly_off,
+                   (SELECT lv.leave_type FROM guard_leaves lv WHERE lv.guard_id = g.id AND lv.status = 'approved' AND CURDATE() BETWEEN lv.from_date AND lv.to_date LIMIT 1) AS leave_today,
                    a.id AS assignment_id, a.site_name, a.site_lat, a.site_lng, a.geofence_radius_m,
                    a.shift_start, a.shift_end, c.id AS client_id, c.name AS client_name, c.client_code,
                    (SELECT COUNT(*) FROM alerts s WHERE s.guard_id = g.id AND s.type = 'sos' AND s.status <> 'resolved') AS open_sos,

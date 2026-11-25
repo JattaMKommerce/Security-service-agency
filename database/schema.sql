@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS guards (
     last_ping_at            DATETIME NULL,
     gps_state               ENUM('ok','off','denied','unknown') NOT NULL DEFAULT 'unknown',
     gps_state_at            DATETIME NULL,
+    weekly_off              VARCHAR(20) NULL,
     remember_hash           CHAR(64) NULL,
     remember_expires        DATETIME NULL,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -310,6 +311,24 @@ CREATE TABLE IF NOT EXISTS shift_handovers (
     CONSTRAINT fk_ho_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS guard_leaves (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    guard_id        INT UNSIGNED NOT NULL,
+    from_date       DATE NOT NULL,
+    to_date         DATE NOT NULL,
+    leave_type      ENUM('casual','sick','emergency','other') NOT NULL DEFAULT 'casual',
+    reason          VARCHAR(255) NULL,
+    status          ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    requested_by    ENUM('guard','admin') NOT NULL DEFAULT 'guard',
+    created_at      DATETIME NOT NULL,
+    decided_by      INT UNSIGNED NULL,
+    decided_at      DATETIME NULL,
+    admin_note      VARCHAR(255) NULL,
+    KEY idx_leave_guard (guard_id, from_date, to_date),
+    KEY idx_leave_status (status, created_at),
+    CONSTRAINT fk_leave_guard FOREIGN KEY (guard_id) REFERENCES guards(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
@@ -338,4 +357,4 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
     ('default_shift_hours',     '8'),
     ('ot_min_minutes',          '15'),
     ('no_movement_min',         '60'),
-    ('schema_version',          '2');
+    ('schema_version',          '3');

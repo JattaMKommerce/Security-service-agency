@@ -125,3 +125,15 @@ html, body { -webkit-tap-highlight-color: transparent; }
 .g-badge { font-size: .7rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; background: #f1f5f9; color: #475569; }
 .g-badge.present { background: #dcfce7; color: #166534; } .g-badge.late { background: #ffedd5; color: #9a3412; } .g-badge.absent { background: #fee2e2; color: #991b1b; }
 .g-toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+/* Weekly off & leave */
+.g-banner-info { background: #e0f2fe; color: #075985; }
+.g-stats { grid-template-columns: repeat(3, 1fr); }
+.g-stat.off strong { color: #0284c7; }
+.g-day.weekly_off { background: #e0f2fe; color: #075985; }
+.g-day.leave { background: #ede9fe; color: #5b21b6; }
+.g-cal-legend .weekly_off { background: #7dd3fc; } .g-cal-legend .leave { background: #c4b5fd; }
+.g-badge.weekly_off, .g-badge.off { background: #e0f2fe; color: #075985; }
+.g-badge.leave { background: #ede9fe; color: #5b21b6; }
+.g-badge.pending { background: #fef3c7; color: #92400e; } .g-badge.ok { background: #dcfce7; color: #166534; }
+.g-badge.no { background: #fee2e2; color: #991b1b; } .g-badge.none { background: #f1f5f9; color: #64748b; }

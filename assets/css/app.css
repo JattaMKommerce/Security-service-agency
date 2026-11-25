@@ -690,3 +690,6 @@ html, body {
     .tracking-map-wrap { order: 1; height: 55vh; }
     .hist-panel { width: auto; left: 10px; right: 60px; }
 }
+.reg-w { background: #e0f2fe !important; color: #075985; font-weight: 700; }
+.reg-lv { background: #ede9fe !important; color: #5b21b6; font-weight: 700; }
+.reg-woff { outline: 2px dashed #0284c7; outline-offset: -3px; }

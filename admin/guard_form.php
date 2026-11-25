@@ -28,6 +28,7 @@ if (is_post() && ($_POST['action'] ?? '') === 'delete' && $guard) {
 $errors = [];
 if (is_post() && ($_POST['action'] ?? 'save') === 'save') {
     require_csrf();
+    $weeklyOff = weekly_off_days(implode(',', array_filter((array)($_POST['weekly_off'] ?? []), 'is_string')));
     $d = [
         'employee_code'           => strtoupper((string)post_str('employee_code', 20)),
         'category'                => in_array($_POST['category'] ?? '', array_keys(guard_categories()), true) ? $_POST['category'] : 'bodyguard',
@@ -48,6 +49,7 @@ if (is_post() && ($_POST['action'] ?? 'save') === 'save') {
         'emergency_contact_name'  => post_str('emergency_contact_name', 120),
         'emergency_contact_phone' => post_str('emergency_contact_phone', 20),
         'joined_on'               => post_str('joined_on', 10),
+        'weekly_off'              => $weeklyOff ? implode(',', $weeklyOff) : null,   // "0" (Sunday only) must stay "0"
         'status'                  => in_array($_POST['status'] ?? '', ['active', 'on_leave', 'inactive'], true) ? $_POST['status'] : 'active',
     ];
     // Spaces at the start/end are almost always typing mistakes: drop them.
@@ -132,7 +134,8 @@ require APP_ROOT . '/includes/layout/header.php';
                     <div class="col-md-6"><label class="form-label required">Full name</label><input name="full_name" class="form-control" value="<?= $v('full_name') ?>" required></div>
                     <div class="col-md-3"><label class="form-label">Employee code</label><input name="employee_code" class="form-control text-uppercase" value="<?= $v('employee_code') ?>"></div>
                     <div class="col-md-3"><label class="form-label">Status</label>
-                        <select name="status" class="form-select"><?php foreach (['active', 'on_leave', 'inactive'] as $s): ?><option value="<?= $s ?>" <?= ($g['status'] ?? '') === $s ? 'selected' : '' ?>><?= label($s) ?></option><?php endforeach; ?></select></div>
+                        <select name="status" class="form-select"><?php foreach (['active', 'on_leave', 'inactive'] as $s): ?><option value="<?= $s ?>" <?= ($g['status'] ?? '') === $s ? 'selected' : '' ?>><?= $s === 'on_leave' ? 'Long leave (no app login)' : label($s) ?></option><?php endforeach; ?></select>
+                        <div class="form-text" style="font-size:.72rem">For a few days off, keep Active and add leave in <a href="<?= url('admin/duty.php?tab=leave') ?>">Leave &amp; Overtime</a>.</div></div>
                     <div class="col-md-4"><label class="form-label required">Phone (login)</label><input name="phone" class="form-control" value="<?= $v('phone') ?>" inputmode="tel" required></div>
                     <div class="col-md-4"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="<?= $v('email') ?>"></div>
                     <div class="col-md-4"><label class="form-label">Gender</label>
@@ -161,6 +164,16 @@ require APP_ROOT . '/includes/layout/header.php';
                     <div class="col-md-4 d-flex align-items-end">
                         <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="is_armed" value="1" id="isArmed" <?= !empty($g['is_armed']) ? 'checked' : '' ?>>
                             <label class="form-check-label fw-semibold" for="isArmed">Armed with Gun (Firearm)</label></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Weekly off</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php $wo = weekly_off_days($g['weekly_off'] ?? null); foreach (WEEKDAY_NAMES as $i => $dn): ?>
+                                <input type="checkbox" class="btn-check" name="weekly_off[]" value="<?= $i ?>" id="wo<?= $i ?>" autocomplete="off" <?= in_array($i, $wo, true) ? 'checked' : '' ?>>
+                                <label class="btn btn-sm btn-outline-primary rounded-pill px-3" for="wo<?= $i ?>"><?= substr($dn, 0, 3) ?></label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="form-text" style="font-size:.75rem">These days are shown as "Weekly off" in attendance — not absent — and no late alert is sent.</div>
                     </div>
                     <div class="col-md-8" id="weaponWrap"><label class="form-label">Weapon licence no.</label><input name="weapon_license_no" class="form-control" value="<?= $v('weapon_license_no') ?>" placeholder="e.g. LIC-DL-2024-998"></div>
                 </div>

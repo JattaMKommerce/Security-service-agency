@@ -40,4 +40,12 @@ json_out([
     ], q_all("SELECT x.id, x.requested_minutes, x.reason, g.full_name FROM duty_extensions x JOIN guards g ON g.id = x.guard_id
                WHERE x.id > ? AND x.status = 'pending' ORDER BY x.id LIMIT 10", [get_int('ext_since')])) : [],
     'ext_max_id'  => (int)q_val('SELECT COALESCE(MAX(id), 0) FROM duty_extensions'),
+    // Leave requests from guards (same badge as extra hours).
+    'leave_pending' => (int)q_val("SELECT COUNT(*) FROM guard_leaves WHERE status = 'pending'"),
+    'leave_new'     => isset($_GET['leave_since']) ? array_map(fn($l) => [
+        'guard_name' => $l['full_name'], 'type' => leave_type_label($l['leave_type']),
+        'dates' => fmt_date($l['from_date'], 'd M') . ($l['to_date'] !== $l['from_date'] ? ' – ' . fmt_date($l['to_date'], 'd M') : ''),
+    ], q_all("SELECT l.from_date, l.to_date, l.leave_type, g.full_name FROM guard_leaves l JOIN guards g ON g.id = l.guard_id
+               WHERE l.id > ? AND l.status = 'pending' AND l.requested_by = 'guard' ORDER BY l.id LIMIT 10", [get_int('leave_since')])) : [],
+    'leave_max_id'  => (int)q_val('SELECT COALESCE(MAX(id), 0) FROM guard_leaves'),
 ]);

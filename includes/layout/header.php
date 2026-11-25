@@ -10,7 +10,8 @@ $useMap = $useMap ?? false;
 $useCharts = $useCharts ?? false;
 $openAlerts = (int)q_val("SELECT COUNT(*) FROM alerts WHERE status <> 'resolved'");
 $newInquiries = (int)q_val("SELECT COUNT(*) FROM inquiries WHERE status = 'new'");
-$pendingExt = (int)q_val("SELECT COUNT(*) FROM duty_extensions WHERE status = 'pending'");
+$pendingExt = (int)q_val("SELECT COUNT(*) FROM duty_extensions WHERE status = 'pending'")
+            + (int)q_val("SELECT COUNT(*) FROM guard_leaves WHERE status = 'pending'");
 
 $nav = [
     ['dashboard',   'admin/index.php',       'bi-speedometer2',      'Dashboard'],
@@ -20,7 +21,7 @@ $nav = [
     ['assignments', 'admin/assignments.php', 'bi-briefcase',         'Hiring / Deployments'],
     ['inquiries',   'admin/inquiries.php',   'bi-chat-left-dots',    'Web Inquiries'],
     ['attendance',  'admin/attendance.php',  'bi-calendar-check',    'Attendance'],
-    ['duty',        'admin/duty.php',        'bi-hourglass-split',   'Overtime & Handover'],
+    ['duty',        'admin/duty.php',        'bi-hourglass-split',   'Leave & Overtime'],
     ['alerts',      'admin/alerts.php',      'bi-exclamation-octagon', 'Alerts'],
     ['invoices',    'admin/invoices.php',    'bi-receipt',           'Invoices'],
     ['settings',    'admin/settings.php',    'bi-gear',              'Settings'],

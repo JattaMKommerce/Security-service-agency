@@ -35,6 +35,8 @@ $title = 'Duty';
         <button class="btn btn-light w-100 mt-3 fw-semibold" id="sosCancel"><i class="bi bi-check-circle"></i> I am safe — cancel SOS</button>
     </section>
 
+    <div id="offBanner" class="g-banner g-banner-info d-none"><i class="bi bi-cup-hot"></i> <span id="offBannerText"></span></div>
+
     <!-- Incoming handover waiting for this guard -->
     <div id="handInBox"></div>
 
@@ -119,8 +121,17 @@ $title = 'Duty';
         <div class="g-cal-head"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
         <div class="g-cal" id="histCal"></div>
         <div class="g-cal-legend">
-            <span><i class="present"></i>Present</span><span><i class="late"></i>Late</span><span><i class="absent"></i>Absent</span><span><i class="none"></i>No duty</span>
+            <span><i class="present"></i>Present</span><span><i class="late"></i>Late</span><span><i class="absent"></i>Absent</span>
+            <span><i class="weekly_off"></i>Weekly off</span><span><i class="leave"></i>Leave</span><span><i class="none"></i>No duty</span>
         </div>
+    </section>
+    <section class="g-card">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <div class="g-label mb-0">My leave</div>
+            <button class="btn btn-sm btn-primary fw-semibold" id="leaveBtn"><i class="bi bi-calendar-plus"></i> Request leave</button>
+        </div>
+        <div class="small text-muted mb-2">Weekly off: <strong id="weeklyOffText">—</strong></div>
+        <div id="leaveList" class="small"></div>
     </section>
     <section class="g-card">
         <div class="g-label" id="histDayLabel">Daily attendance</div>
@@ -166,6 +177,24 @@ $title = 'Duty';
         <label class="form-label small fw-semibold" for="extReason">Reason</label>
         <textarea class="form-control mb-3" id="extReason" rows="2" maxlength="255" placeholder="e.g. Relief guard has not arrived / client asked me to stay"></textarea>
         <button class="btn btn-lg btn-primary w-100 fw-bold" id="extSend"><i class="bi bi-send-fill"></i> Send request</button>
+    </div>
+</div>
+
+<!-- Leave request sheet -->
+<div class="g-sheet" id="sheetLeave" aria-hidden="true">
+    <div class="g-sheet-box">
+        <div class="g-sheet-title">Request leave <button class="g-sheet-x" data-close aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+        <p class="small text-muted mb-2">The control room approves leave. Approved leave days are not counted as absent.</p>
+        <label class="form-label small fw-semibold">Type of leave</label>
+        <div class="g-pills mb-3" id="leaveTypes"></div>
+        <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label small fw-semibold" for="leaveFrom">From</label><input type="date" class="form-control" id="leaveFrom"></div>
+            <div class="col-6"><label class="form-label small fw-semibold" for="leaveTo">To (last day)</label><input type="date" class="form-control" id="leaveTo"></div>
+        </div>
+        <div class="small text-muted mb-2" id="leaveDays"></div>
+        <label class="form-label small fw-semibold" for="leaveReason">Reason</label>
+        <textarea class="form-control mb-3" id="leaveReason" rows="2" maxlength="255" placeholder="e.g. Family function in village"></textarea>
+        <button class="btn btn-lg btn-primary w-100 fw-bold" id="leaveSend"><i class="bi bi-send-fill"></i> Send leave request</button>
     </div>
 </div>
 

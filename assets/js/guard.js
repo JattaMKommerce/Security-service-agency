@@ -155,6 +155,9 @@
         $('shiftInfo').classList.toggle('d-none', !on);
         renderExtension();
         renderHandIn();
+        $('offBanner').classList.toggle('d-none', !state.today_off || on);
+        $('offBannerText').textContent = (state.today_off || '') + ' You can still start duty if your supervisor asked you to.';
+        renderLeaves();
         $('trackInfo').classList.toggle('d-none', !(on || state.sos));
         $('outsideWarn').classList.toggle('d-none', !(on && state.outside));
 
@@ -658,6 +661,65 @@
         finally { $('handSend').disabled = false; }
     });
 
+    // ---------- leave ----------
+    const LEAVE_STATUS = { pending: ['Waiting for approval', 'pending'], approved: ['Approved', 'ok'], rejected: ['Not approved', 'no'], cancelled: ['Cancelled', 'none'] };
+    function renderLeaves() {
+        $('weeklyOffText').textContent = state.weekly_off;
+        const list = state.leaves || [];
+        $('leaveList').innerHTML = list.length ? list.map((l) => {
+            const st = LEAVE_STATUS[l.status] || [l.status, 'none'];
+            return '<div class="g-row"><div><div class="fw-semibold">' + esc(l.from) + (l.days > 1 ? ' – ' + esc(l.to) : '') +
+                ' <span class="text-muted fw-normal">(' + l.days + ' day' + (l.days > 1 ? 's' : '') + ')</span></div>' +
+                '<div class="text-muted">' + esc(l.type) + (l.reason ? ' · ' + esc(l.reason) : '') + (l.by_admin ? ' · added by control room' : '') + '</div>' +
+                (l.note ? '<div class="text-muted"><i class="bi bi-chat-left-text"></i> ' + esc(l.note) + '</div>' : '') + '</div>' +
+                '<div class="text-end"><span class="g-badge ' + st[1] + '">' + st[0] + '</span>' +
+                (l.status === 'pending' ? '<div><button class="btn btn-link btn-sm p-0 mt-1" data-leave-cancel="' + l.id + '">Cancel</button></div>' : '') + '</div></div>';
+        }).join('') : '<div class="text-muted">No leave taken recently.</div>';
+    }
+    let leaveType = 'casual';
+    function leaveDaysText() {
+        const f = $('leaveFrom').value, t = $('leaveTo').value || f;
+        if (!f) { $('leaveDays').textContent = ''; return; }
+        const n = Math.round((new Date(t + 'T00:00') - new Date(f + 'T00:00')) / 86400000) + 1;
+        $('leaveDays').textContent = n > 0 ? n + ' day' + (n > 1 ? 's' : '') + ' of leave' : 'The last day cannot be before the first day.';
+    }
+    $('leaveBtn').addEventListener('click', () => {
+        const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        $('leaveTypes').innerHTML = Object.entries(state.leave_types).map(([k, v]) => '<button type="button" data-type="' + k + '"' + (k === leaveType ? ' class="active"' : '') + '>' + esc(v.replace(' leave', '')) + '</button>').join('');
+        $('leaveTypes').querySelectorAll('[data-type]').forEach((b) => b.addEventListener('click', () => {
+            leaveType = b.dataset.type;
+            $('leaveTypes').querySelectorAll('[data-type]').forEach((x) => x.classList.toggle('active', x === b));
+        }));
+        $('leaveFrom').min = today; $('leaveTo').min = today;
+        if (!$('leaveFrom').value || $('leaveFrom').value < today) $('leaveFrom').value = today;
+        if ($('leaveTo').value && $('leaveTo').value < $('leaveFrom').value) $('leaveTo').value = '';
+        leaveDaysText();
+        openSheet('sheetLeave');
+    });
+    $('leaveFrom').addEventListener('change', () => {
+        $('leaveTo').min = $('leaveFrom').value;
+        if ($('leaveTo').value && $('leaveTo').value < $('leaveFrom').value) $('leaveTo').value = $('leaveFrom').value;
+        leaveDaysText();
+    });
+    $('leaveTo').addEventListener('change', leaveDaysText);
+    $('leaveSend').addEventListener('click', async () => {
+        const reason = $('leaveReason').value.trim();
+        if (reason.length < 3) { toast('Please write the reason.'); $('leaveReason').focus(); return; }
+        $('leaveSend').disabled = true;
+        try {
+            state = await api('api/guard/leave.php', { action: 'request', type: leaveType, from: $('leaveFrom').value, to: $('leaveTo').value || $('leaveFrom').value, reason });
+            $('leaveReason').value = ''; $('leaveTo').value = '';
+            closeSheet('sheetLeave'); toast(state.message, 5000); render();
+            if (!$('viewHistory').classList.contains('d-none')) loadHistory(histMonth);
+        } catch (e) { toast(e.message, 5000); }
+        finally { $('leaveSend').disabled = false; }
+    });
+    document.addEventListener('click', async (ev) => {
+        const b = ev.target.closest('[data-leave-cancel]');
+        if (!b || !confirm('Cancel this leave request?')) return;
+        try { state = await api('api/guard/leave.php', { action: 'cancel', id: +b.dataset.leaveCancel }); toast(state.message); render(); } catch (e) { toast(e.message, 5000); }
+    });
+
     // ---------- tabs & attendance history ----------
     let histMonth = null, histData = null, histDay = null;
     function showView(v) {
@@ -680,14 +742,14 @@
     $('histPrev').addEventListener('click', () => histData && loadHistory(histData.prev));
     $('histNext').addEventListener('click', () => histData && histData.next && loadHistory(histData.next));
 
-    const DAY_LABEL = { present: 'Present', late: 'Late', absent: 'Absent', pending: 'Not checked in yet', upcoming: 'Upcoming', none: 'No duty' };
+    const DAY_LABEL = { present: 'Present', late: 'Late', absent: 'Absent', weekly_off: 'Weekly off', leave: 'Leave', pending: 'Not checked in yet', upcoming: 'Upcoming', none: 'No duty' };
     function renderHistory() {
         const d = histData, s = d.summary;
         $('histLabel').textContent = d.label;
         $('histNext').disabled = !d.next;
         const tile = (n, l, cls) => '<div class="g-stat ' + (cls || '') + '"><strong>' + n + '</strong><span>' + l + '</span></div>';
         $('histStats').innerHTML = tile(s.present, 'Present', 'ok') + tile(s.late, 'Late', 'warn') + tile(s.absent, 'Absent', 'bad') +
-            tile((s.minutes / 60).toFixed(1), 'Hours') + tile((s.ot / 60).toFixed(1), 'OT hours', 'ot');
+            tile(s.leave + s.weekly_off, 'Off / Leave', 'off') + tile((s.minutes / 60).toFixed(1), 'Hours') + tile((s.ot / 60).toFixed(1), 'OT hours', 'ot');
         const lead = d.days[0].dow;
         $('histCal').innerHTML = '<span></span>'.repeat(lead) + d.days.map((x) =>
             '<button class="g-day ' + x.status + (x.date === histDay ? ' sel' : '') + '" data-day="' + x.date + '">' + x.day +
@@ -695,18 +757,19 @@
         $('histCal').querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => {
             histDay = histDay === b.dataset.day ? null : b.dataset.day; renderHistory();
         }));
-        const list = d.days.filter((x) => histDay ? x.date === histDay : (x.shifts.length || x.status === 'absent')).reverse();
+        const list = d.days.filter((x) => histDay ? x.date === histDay : (x.shifts.length || x.status === 'absent' || x.status === 'leave')).reverse();
         $('histDayLabel').textContent = histDay ? new Date(histDay + 'T00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) : 'Daily attendance';
         $('histDays').innerHTML = list.length ? list.map((x) =>
             '<div class="g-hday"><div class="d-flex justify-content-between align-items-center mb-1">' +
             '<strong>' + new Date(x.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + '</strong>' +
-            '<span class="g-badge ' + x.status + '">' + DAY_LABEL[x.status] + '</span></div>' +
+            '<span><span class="g-badge ' + x.status + '">' + esc(x.status === 'leave' ? x.off_label : DAY_LABEL[x.status]) + '</span>' +
+            (x.off && x.shifts.length ? ' <span class="g-badge off">Worked on ' + esc(x.off === 'leave' ? 'leave' : 'weekly off') + '</span>' : '') + '</span></div>' +
             (x.shifts.length ? x.shifts.map((sh) => '<div class="g-row"><div><div class="fw-semibold">' + esc(sh.in) + ' – ' + (sh.out ? esc(sh.out) + (sh.out_day ? ' <span class="text-muted">(' + esc(sh.out_day) + ')</span>' : '') : '<span class="text-success">on duty</span>') + '</div>' +
                 '<div class="text-muted">' + esc(sh.client || 'No client') + (sh.site ? ' · ' + esc(sh.site) : '') + '</div>' +
                 (sh.late ? '<div class="text-warning-emphasis">Late by ' + fmtMin(sh.late) + '</div>' : '') + '</div>' +
                 '<div class="text-end"><div class="fw-semibold">' + fmtMin(sh.minutes) + '</div>' +
                 (sh.ot ? '<div class="small ' + (sh.ot_approved >= sh.ot ? 'text-success' : 'text-warning-emphasis') + '">OT ' + fmtMin(sh.ot) + (sh.ot_approved < sh.ot ? ' (' + fmtMin(sh.ot - sh.ot_approved) + ' unapproved)' : '') + '</div>' : '') +
-                '</div></div>').join('') : '<div class="text-muted">' + (x.status === 'absent' ? 'No check-in on this day.' : 'No shifts.') + '</div>') +
+                '</div></div>').join('') : '<div class="text-muted">' + (x.status === 'absent' ? 'No check-in on this day.' : x.status === 'leave' ? 'On approved leave.' : x.status === 'weekly_off' ? 'Weekly off.' : 'No shifts.') + '</div>') +
             '</div>').join('') : '<div class="text-muted">No attendance yet this month.</div>';
     }
 

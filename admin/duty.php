@@ -1,11 +1,11 @@
 <?php
 /**
- * Overtime & Handover: approve duty extension requests, review overtime,
- * and see the shift handover log.
+ * Leave & Overtime: approve duty extension and leave requests, record leave,
+ * review overtime, and see the shift handover log.
  */
 require dirname(__DIR__) . '/includes/bootstrap.php';
 $admin = require_admin();
-$tab = in_array(get_str('tab', 12), ['requests', 'overtime', 'handovers'], true) ? get_str('tab', 12) : 'requests';
+$tab = in_array(get_str('tab', 12), ['requests', 'leave', 'overtime', 'handovers'], true) ? get_str('tab', 12) : 'requests';
 
 if (is_post()) {
     require_csrf();
@@ -28,6 +28,55 @@ if (is_post()) {
         redirect('admin/duty.php?tab=requests');
     }
 
+    if ($action === 'leave_decide') {
+        $id = (int)post_int('id', 0);
+        $l = q_one('SELECT l.*, g.full_name FROM guard_leaves l JOIN guards g ON g.id = l.guard_id WHERE l.id = ?', [$id]);
+        $approve = ($_POST['decision'] ?? '') === 'approve';
+        if (!$l || $l['status'] !== 'pending') {
+            flash('warning', 'This leave request was already handled or cancelled.');
+        } else {
+            q("UPDATE guard_leaves SET status = ?, decided_by = ?, decided_at = ?, admin_note = ? WHERE id = ? AND status = 'pending'",
+              [$approve ? 'approved' : 'rejected', $admin['id'], now(), post_str('note', 255), $id]);
+            log_activity('leave.' . ($approve ? 'approve' : 'reject'), $l['full_name'] . ' ' . $l['from_date'] . '–' . $l['to_date']);
+            flash('success', 'Leave ' . ($approve ? 'approved' : 'rejected') . ' for ' . $l['full_name'] . '. The guard sees it in the app.');
+        }
+        redirect('admin/duty.php?tab=leave');
+    }
+
+    if ($action === 'leave_add') {
+        $gid = (int)post_int('guard_id', 0);
+        $from = (string)post_str('from_date', 10);
+        $to = (string)(post_str('to_date', 10) ?? $from);
+        $type = $_POST['leave_type'] ?? '';
+        $g = $gid ? q_one('SELECT id, full_name FROM guards WHERE id = ?', [$gid]) : null;
+        $err = null;
+        if (!$g) $err = 'Choose the guard.';
+        elseif (!valid_date($from) || !valid_date($to) || $to < $from) $err = 'Choose valid leave dates (the last day cannot be before the first).';
+        elseif ($from < date('Y-m-d', strtotime('-60 days'))) $err = 'Leave can be recorded up to 60 days back.';
+        elseif ((strtotime($to) - strtotime($from)) / 86400 >= 90) $err = 'Leave can be at most 90 days at a time.';
+        elseif (!isset(LEAVE_TYPES[$type])) $err = 'Choose the type of leave.';
+        elseif (q_val("SELECT id FROM guard_leaves WHERE guard_id = ? AND status IN ('pending','approved') AND from_date <= ? AND to_date >= ?", [$gid, $to, $from]))
+            $err = $g['full_name'] . ' already has leave (approved or waiting) on some of these days.';
+        if ($err) {
+            flash('danger', $err);
+        } else {
+            q("INSERT INTO guard_leaves (guard_id, from_date, to_date, leave_type, reason, status, requested_by, created_at, decided_by, decided_at)
+               VALUES (?, ?, ?, ?, ?, 'approved', 'admin', ?, ?, ?)", [$gid, $from, $to, $type, post_str('reason', 255), now(), $admin['id'], now()]);
+            log_activity('leave.add', $g['full_name'] . ' ' . $from . '–' . $to . ' ' . $type);
+            flash('success', 'Leave added for ' . $g['full_name'] . ' (' . fmt_date($from, 'd M') . ($to !== $from ? ' – ' . fmt_date($to, 'd M') : '') . ').');
+        }
+        redirect('admin/duty.php?tab=leave');
+    }
+
+    if ($action === 'leave_cancel') {
+        $id = (int)post_int('id', 0);
+        $n = q("UPDATE guard_leaves SET status = 'cancelled', decided_by = ?, decided_at = ?, admin_note = COALESCE(admin_note, 'Cancelled by control room')
+                 WHERE id = ? AND status IN ('pending','approved')", [$admin['id'], now(), $id])->rowCount();
+        if ($n) log_activity('leave.cancel', 'leave #' . $id);
+        flash($n ? 'success' : 'warning', $n ? 'Leave cancelled. Those days count as normal working days again.' : 'Nothing to cancel.');
+        redirect('admin/duty.php?tab=leave');
+    }
+
     if ($action === 'ot_approve') {
         $id = (int)post_int('id', 0);
         $n = q("UPDATE attendance SET approved_ot_minutes = overtime_minutes WHERE id = ? AND status <> 'open' AND overtime_minutes > COALESCE(approved_ot_minutes, 0)", [$id])->rowCount();
@@ -38,8 +87,9 @@ if (is_post()) {
 }
 
 $pendingCount = (int)q_val("SELECT COUNT(*) FROM duty_extensions WHERE status = 'pending'");
+$pendingLeave = (int)q_val("SELECT COUNT(*) FROM guard_leaves WHERE status = 'pending'");
 
-$pageTitle = 'Overtime & Handover';
+$pageTitle = 'Leave & Overtime';
 $activeNav = 'duty';
 require APP_ROOT . '/includes/layout/header.php';
 $tabLink = fn(string $t, string $icon, string $text, int $badge = 0) => '<a href="' . url('admin/duty.php?tab=' . $t) . '" class="btn ' . ($tab === $t ? 'btn-primary' : 'btn-outline-primary bg-white') . ' fw-semibold">'
@@ -47,13 +97,14 @@ $tabLink = fn(string $t, string $icon, string $text, int $badge = 0) => '<a href
 ?>
 <div class="guard-hero-banner mb-3">
     <div class="guard-hero-content">
-        <h2 class="guard-hero-title">Overtime, Extensions &amp; Handovers</h2>
-        <p class="guard-hero-sub">Approve extra working hours, review overtime and see who handed over duty to whom</p>
+        <h2 class="guard-hero-title">Leave, Overtime &amp; Handovers</h2>
+        <p class="guard-hero-sub">Approve extra hours and leave, review overtime and see who handed over duty to whom</p>
     </div>
     <div class="guard-hero-graphic d-none d-sm-block text-end pe-3" style="font-size:3.5rem;color:rgba(124,58,237,0.2);"><i class="bi bi-hourglass-split"></i></div>
 </div>
 <div class="btn-group w-100 mb-3 flex-wrap" role="group">
     <?= $tabLink('requests', 'bi-hourglass-split', 'Extra hours', $pendingCount) ?>
+    <?= $tabLink('leave', 'bi-calendar-x', 'Leave', $pendingLeave) ?>
     <?= $tabLink('overtime', 'bi-clock-history', 'Overtime') ?>
     <?= $tabLink('handovers', 'bi-arrow-left-right', 'Handovers') ?>
 </div>
@@ -126,6 +177,111 @@ $tabLink = fn(string $t, string $icon, string $text, int $badge = 0) => '<a href
                         <span class="badge badge-soft-<?= $cls ?>"><?= e(label($x['status'])) ?><?= $x['status'] === 'approved' ? ' ' . fmt_minutes((int)$x['approved_minutes']) : '' ?></span>
                         <?= $x['admin_note'] ? '<div class="text-muted">' . e($x['admin_note']) . '</div>' : '' ?></td>
                     <td class="small text-muted"><?= e($x['decided_name'] ?? ($x['status'] === 'cancelled' ? 'Guard / system' : '—')) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div></div>
+
+<?php elseif ($tab === 'leave'):
+    $lp = q_all("SELECT l.*, g.full_name, g.employee_code, g.photo, g.phone, g.weekly_off, c.name AS client_name, a.site_name
+                   FROM guard_leaves l JOIN guards g ON g.id = l.guard_id
+                   LEFT JOIN assignments a ON a.guard_id = g.id AND a.status = 'active' LEFT JOIN clients c ON c.id = a.client_id
+                  WHERE l.status = 'pending' ORDER BY l.from_date");
+    $lgid = get_int('guard_id');
+    $allGuards = q_all("SELECT id, full_name, employee_code FROM guards WHERE status <> 'inactive' ORDER BY full_name");
+    $lrows = q_all("SELECT l.*, g.full_name, g.employee_code, d.name AS decided_name FROM guard_leaves l JOIN guards g ON g.id = l.guard_id
+                     LEFT JOIN admins d ON d.id = l.decided_by
+                    WHERE l.to_date >= ? AND l.status <> 'pending'" . ($lgid ? ' AND l.guard_id = ?' : '') . "
+                    ORDER BY (l.to_date >= CURDATE()) DESC, l.from_date DESC LIMIT 200",
+                   $lgid ? [date('Y-m-d', strtotime('-60 days')), $lgid] : [date('Y-m-d', strtotime('-60 days'))]);
+    $onLeaveToday = (int)q_val("SELECT COUNT(DISTINCT guard_id) FROM guard_leaves WHERE status = 'approved' AND CURDATE() BETWEEN from_date AND to_date");
+    $offToday = (int)q_val("SELECT COUNT(*) FROM guards WHERE status = 'active' AND FIND_IN_SET(?, weekly_off)", [date('w')]);
+    $days = fn($l) => (int)((strtotime($l['to_date']) - strtotime($l['from_date'])) / 86400) + 1;
+?>
+    <div class="stat-grid-4">
+        <div class="stat-box-modern"><div class="stat-box-icon text-warning bg-warning-subtle"><i class="bi bi-hourglass"></i></div>
+            <div class="stat-box-num"><?= count($lp) ?></div><div class="stat-box-lbl">Waiting approval</div></div>
+        <div class="stat-box-modern"><div class="stat-box-icon text-purple bg-purple-subtle"><i class="bi bi-calendar-x"></i></div>
+            <div class="stat-box-num"><?= $onLeaveToday ?></div><div class="stat-box-lbl">On leave today</div></div>
+        <div class="stat-box-modern"><div class="stat-box-icon text-info bg-info-subtle"><i class="bi bi-cup-hot"></i></div>
+            <div class="stat-box-num"><?= $offToday ?></div><div class="stat-box-lbl">Weekly off today</div></div>
+        <div class="stat-box-modern"><div class="stat-box-icon text-primary bg-primary-subtle"><i class="bi bi-gear"></i></div>
+            <div class="stat-box-num" style="font-size:1rem"><a href="<?= url('admin/guards.php') ?>">Set weekly offs</a></div><div class="stat-box-lbl">on each guard's profile</div></div>
+    </div>
+
+    <h2 class="fs-5 fw-bold mb-3">Leave requests waiting (<?= count($lp) ?>)</h2>
+    <?php if (!$lp): ?>
+        <div class="empty-state bg-white rounded-4 border p-4 mb-3 text-center"><i class="bi bi-check2-circle fs-2 text-success d-block mb-2"></i>
+            <div class="fw-semibold">No pending leave requests</div><div class="small text-muted">Guards request leave from the Attendance tab of the app.</div></div>
+    <?php endif; ?>
+    <div class="row g-3 mb-4">
+    <?php foreach ($lp as $l):
+        $clash = $l['client_name'] ? q_all("SELECT DISTINCT g.full_name FROM guard_leaves x JOIN guards g ON g.id = x.guard_id JOIN assignments a ON a.guard_id = g.id AND a.status = 'active'
+                                             JOIN clients c ON c.id = a.client_id
+                                            WHERE x.status = 'approved' AND x.guard_id <> ? AND c.name = ? AND x.from_date <= ? AND x.to_date >= ?",
+                                           [$l['guard_id'], $l['client_name'], $l['to_date'], $l['from_date']]) : []; ?>
+        <div class="col-lg-6">
+            <div class="card h-100 border-warning"><div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <?= avatar($l['full_name'], $l['photo'], 'md') ?>
+                    <div class="min-w-0"><div class="fw-bold"><?= e($l['full_name']) ?> <span class="small text-muted fw-normal"><?= e($l['employee_code']) ?></span></div>
+                        <div class="small text-muted text-truncate"><?= e($l['client_name'] ?? 'Not deployed') ?><?= $l['site_name'] ? ' · ' . e($l['site_name']) : '' ?></div></div>
+                    <a href="tel:<?= e($l['phone']) ?>" class="btn btn-sm btn-light ms-auto" aria-label="Call"><i class="bi bi-telephone"></i></a>
+                </div>
+                <div class="fs-6 fw-bold"><?= e(fmt_date($l['from_date'], 'D, d M')) ?><?= $l['to_date'] !== $l['from_date'] ? ' → ' . e(fmt_date($l['to_date'], 'D, d M')) : '' ?>
+                    <span class="badge badge-soft-primary ms-1"><?= $days($l) ?> day<?= $days($l) > 1 ? 's' : '' ?></span></div>
+                <div class="small text-muted mb-2"><?= e(leave_type_label($l['leave_type'])) ?> · weekly off <?= e(weekly_off_label($l['weekly_off'], true)) ?> · asked <?= e(time_ago($l['created_at'])) ?></div>
+                <?php if ($l['reason']): ?><div class="g-note-admin mb-2"><i class="bi bi-chat-left-quote me-1"></i><?= e($l['reason']) ?></div><?php endif; ?>
+                <?php if ($clash): ?><div class="small text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> Also on leave at <?= e($l['client_name']) ?> then: <?= e(implode(', ', array_column($clash, 'full_name'))) ?> — arrange cover.</div><?php endif; ?>
+                <form method="post" class="row g-2">
+                    <?= csrf_field() ?><input type="hidden" name="action" value="leave_decide"><input type="hidden" name="id" value="<?= (int)$l['id'] ?>">
+                    <div class="col-12"><input name="note" class="form-control form-control-sm" maxlength="255" placeholder="Note to guard (optional)"></div>
+                    <div class="col-6"><button name="decision" value="approve" class="btn btn-success w-100 fw-semibold"><i class="bi bi-check2-circle"></i> Approve</button></div>
+                    <div class="col-6"><button name="decision" value="reject" class="btn btn-outline-danger w-100" data-confirm="Reject this leave request?"><i class="bi bi-x-circle"></i> Reject</button></div>
+                </form>
+            </div></div>
+        </div>
+    <?php endforeach; ?>
+    </div>
+
+    <div class="card mb-4"><div class="card-body">
+        <h2 class="fs-6 fw-bold mb-1"><i class="bi bi-calendar-plus me-1"></i>Add leave for a guard</h2>
+        <p class="small text-muted mb-3">For a guard who called in sick or asked in person. It is approved straight away and shows in their app.</p>
+        <form method="post" class="row g-2">
+            <?= csrf_field() ?><input type="hidden" name="action" value="leave_add">
+            <div class="col-md-4"><select name="guard_id" class="form-select" required aria-label="Guard">
+                <option value="">Select guard…</option>
+                <?php foreach ($allGuards as $ag): ?><option value="<?= (int)$ag['id'] ?>" <?= $lgid === (int)$ag['id'] ? 'selected' : '' ?>><?= e($ag['full_name']) ?> (<?= e($ag['employee_code']) ?>)</option><?php endforeach; ?>
+            </select></div>
+            <div class="col-md-3"><select name="leave_type" class="form-select" aria-label="Leave type"><?php foreach (LEAVE_TYPES as $k => $v): ?><option value="<?= $k ?>"><?= e($v) ?></option><?php endforeach; ?></select></div>
+            <div class="col-6 col-md-2"><input type="date" name="from_date" class="form-control" value="<?= date('Y-m-d') ?>" required aria-label="From"></div>
+            <div class="col-6 col-md-3"><input type="date" name="to_date" class="form-control" value="<?= date('Y-m-d') ?>" required aria-label="To (last day)"></div>
+            <div class="col-md-9"><input name="reason" class="form-control" maxlength="255" placeholder="Reason (optional)"></div>
+            <div class="col-md-3"><button class="btn btn-primary w-100 fw-semibold"><i class="bi bi-plus-lg"></i> Add leave</button></div>
+        </form>
+    </div></div>
+
+    <h2 class="fs-6 fw-bold mb-2 text-muted">Upcoming &amp; recent leave<?= $lgid ? ' · ' . e(q_val('SELECT full_name FROM guards WHERE id = ?', [$lgid]) ?? '') . ' <a class="small fw-normal" href="' . url('admin/duty.php?tab=leave') . '">show all</a>' : '' ?></h2>
+    <div class="card table-card mb-3"><div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Guard</th><th>Dates</th><th>Type</th><th>Status</th><th>By</th><th></th></tr></thead>
+            <tbody>
+            <?php if (!$lrows): ?><tr><td colspan="6"><div class="empty-state"><i class="bi bi-calendar"></i>No leave recorded</div></td></tr><?php endif; ?>
+            <?php foreach ($lrows as $l):
+                $cls = ['approved' => 'success', 'rejected' => 'danger', 'cancelled' => 'secondary'][$l['status']] ?? 'secondary'; ?>
+                <tr class="<?= $l['status'] === 'approved' && $l['from_date'] <= date('Y-m-d') && $l['to_date'] >= date('Y-m-d') ? 'table-primary' : '' ?>">
+                    <td class="small"><a class="fw-semibold" href="<?= url('admin/guard_view.php?id=' . $l['guard_id']) ?>"><?= e($l['full_name']) ?></a><div class="text-muted"><?= e($l['employee_code']) ?></div></td>
+                    <td class="small text-nowrap"><?= e(fmt_date($l['from_date'], 'd M')) ?><?= $l['to_date'] !== $l['from_date'] ? ' – ' . e(fmt_date($l['to_date'], 'd M Y')) : ' ' . e(fmt_date($l['from_date'], 'Y')) ?>
+                        <div class="text-muted"><?= $days($l) ?> day<?= $days($l) > 1 ? 's' : '' ?></div></td>
+                    <td class="small"><?= e(leave_type_label($l['leave_type'])) ?><?= $l['reason'] ? '<div class="text-muted">' . e($l['reason']) . '</div>' : '' ?></td>
+                    <td class="small"><span class="badge badge-soft-<?= $cls ?>"><?= e(label($l['status'])) ?></span><?= $l['admin_note'] ? '<div class="text-muted">' . e($l['admin_note']) . '</div>' : '' ?></td>
+                    <td class="small text-muted"><?= $l['requested_by'] === 'admin' ? 'Added by ' . e($l['decided_name'] ?? 'admin') : 'Guard request' . ($l['decided_name'] ? ' · ' . e($l['decided_name']) : '') ?></td>
+                    <td class="text-end"><?php if ($l['status'] === 'approved' && $l['to_date'] >= date('Y-m-d')): ?>
+                        <form method="post" data-confirm="Cancel this leave? Those days will count as working days again."><?= csrf_field() ?>
+                            <input type="hidden" name="action" value="leave_cancel"><input type="hidden" name="id" value="<?= (int)$l['id'] ?>">
+                            <button class="btn btn-sm btn-light text-nowrap">Cancel leave</button></form>
+                    <?php endif; ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

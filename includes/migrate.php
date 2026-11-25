@@ -7,7 +7,7 @@ declare(strict_types=1);
  * database/schema.sql always holds the full, current schema for new installs.
  */
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function maybe_migrate(): void
 {
@@ -23,6 +23,11 @@ function maybe_migrate(): void
         if ($current < 2) {
             migrate_to_2();
             save_setting('schema_version', '2');
+            $current = 2;
+        }
+        if ($current < 3) {
+            migrate_to_3();
+            save_setting('schema_version', '3');
         }
     } catch (Throwable $e) {
         error_log('Database upgrade failed: ' . $e->getMessage());
@@ -114,4 +119,31 @@ SQL);
     q("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
         ('require_selfie', '1'), ('selfie_retention_days', '90'), ('late_grace_min', '15'),
         ('default_shift_hours', '8'), ('ot_min_minutes', '15'), ('no_movement_min', '60')");
+}
+
+const LEAVES_TABLE_SQL = <<<'SQL'
+CREATE TABLE IF NOT EXISTS guard_leaves (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    guard_id        INT UNSIGNED NOT NULL,
+    from_date       DATE NOT NULL,
+    to_date         DATE NOT NULL,
+    leave_type      ENUM('casual','sick','emergency','other') NOT NULL DEFAULT 'casual',
+    reason          VARCHAR(255) NULL,
+    status          ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    requested_by    ENUM('guard','admin') NOT NULL DEFAULT 'guard',
+    created_at      DATETIME NOT NULL,
+    decided_by      INT UNSIGNED NULL,
+    decided_at      DATETIME NULL,
+    admin_note      VARCHAR(255) NULL,
+    KEY idx_leave_guard (guard_id, from_date, to_date),
+    KEY idx_leave_status (status, created_at),
+    CONSTRAINT fk_leave_guard FOREIGN KEY (guard_id) REFERENCES guards(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SQL;
+
+/** v3: weekly off days per guard and leave records (so days off are not counted as absent). */
+function migrate_to_3(): void
+{
+    db_add_columns('guards', ['weekly_off' => 'VARCHAR(20) NULL']);
+    db()->exec(LEAVES_TABLE_SQL);
 }

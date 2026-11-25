@@ -26,6 +26,64 @@ function alert_type_meta(string $type): array
     ][$type] ?? [label($type), 'bi-bell-fill', 'secondary'];
 }
 
+// ---- Weekly off & leave ---------------------------------------------------
+
+const LEAVE_TYPES = ['casual' => 'Casual leave', 'sick' => 'Sick leave', 'emergency' => 'Emergency leave', 'other' => 'Other leave'];
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** Weekly off days stored as "0,6" (0 = Sunday) → [0, 6]. */
+function weekly_off_days(?string $value): array
+{
+    if ($value === null || trim($value) === '') return [];
+    $days = array_unique(array_map('intval', array_filter(explode(',', $value), fn($x) => ctype_digit(trim($x)) && (int)$x <= 6)));
+    sort($days);
+    return $days;
+}
+
+function weekly_off_label(?string $value, bool $short = false): string
+{
+    $days = weekly_off_days($value);
+    if (!$days) return 'No weekly off';
+    return implode(', ', array_map(fn($d) => $short ? substr(WEEKDAY_NAMES[$d], 0, 3) : WEEKDAY_NAMES[$d], $days));
+}
+
+function leave_type_label(string $type): string
+{
+    return LEAVE_TYPES[$type] ?? label($type);
+}
+
+/** Approved leaves of these guards that overlap [from, to]: guard id => list of rows. */
+function approved_leaves(array $guardIds, string $from, string $to): array
+{
+    $guardIds = array_values(array_unique(array_map('intval', $guardIds)));
+    if (!$guardIds) return [];
+    $in = implode(',', array_fill(0, count($guardIds), '?'));
+    $out = [];
+    foreach (q_all("SELECT guard_id, from_date, to_date, leave_type FROM guard_leaves
+                     WHERE status = 'approved' AND guard_id IN ($in) AND from_date <= ? AND to_date >= ?",
+                   array_merge($guardIds, [$to, $from])) as $r) {
+        $out[(int)$r['guard_id']][] = $r;
+    }
+    return $out;
+}
+
+/**
+ * Why a guard is not expected on duty on $day: ['leave', type] (approved leave wins),
+ * ['weekly_off', null], or null for a normal working day.
+ */
+function guard_day_off(?string $weeklyOff, array $leaves, string $day): ?array
+{
+    foreach ($leaves as $l) {
+        if ($l['from_date'] <= $day && $day <= $l['to_date']) {
+            return ['leave', $l['leave_type']];
+        }
+    }
+    if (in_array((int)date('w', strtotime($day)), weekly_off_days($weeklyOff), true)) {
+        return ['weekly_off', null];
+    }
+    return null;
+}
+
 // ---- Shift timings --------------------------------------------------------
 
 function asg_has_shift(?array $asg): bool
@@ -120,8 +178,9 @@ function compute_overtime(array $att, int $outTs): array
 
 /**
  * Day-by-day attendance of one guard for a month (YYYY-MM).
- * Day status: present, late, absent (deployed but no check-in), pending
- * (today, not yet checked in), upcoming, none (not deployed that day).
+ * Day status: present, late, absent (deployed but no check-in), weekly_off,
+ * leave (approved), pending (today, not yet checked in), upcoming, none (not deployed).
+ * Working on a weekly off / leave day counts as present (the day keeps 'off' for display).
  */
 function attendance_month(int $guardId, string $ym): array
 {
@@ -134,6 +193,8 @@ function attendance_month(int $guardId, string $ym): array
                      FROM attendance at LEFT JOIN clients c ON c.id = at.client_id LEFT JOIN assignments a ON a.id = at.assignment_id
                     WHERE at.guard_id = ? AND at.check_in_at >= ? AND at.check_in_at < ?
                     ORDER BY at.check_in_at', [$guardId, $first . ' 00:00:00', date('Y-m-d', strtotime($last . ' +1 day')) . ' 00:00:00']);
+    $weeklyOff = q_val('SELECT weekly_off FROM guards WHERE id = ?', [$guardId]);
+    $leaves = approved_leaves([$guardId], $first, $last)[$guardId] ?? [];
     $asgs = q_all("SELECT start_date, end_date, ended_at FROM assignments
                     WHERE guard_id = ? AND status <> 'cancelled' AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)",
                   [$guardId, $last, $first]);
@@ -163,7 +224,8 @@ function attendance_month(int $guardId, string $ym): array
         ];
     }
 
-    $sum = ['present' => 0, 'late' => 0, 'absent' => 0, 'minutes' => 0, 'ot' => 0, 'ot_approved' => 0, 'ot_unapproved' => 0, 'shifts' => count($rows)];
+    $sum = ['present' => 0, 'late' => 0, 'absent' => 0, 'weekly_off' => 0, 'leave' => 0, 'worked_off' => 0,
+            'minutes' => 0, 'ot' => 0, 'ot_approved' => 0, 'ot_unapproved' => 0, 'shifts' => count($rows)];
     $days = [];
     for ($d = $first; $d <= $last; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
         $shifts = $byDay[$d] ?? [];
@@ -174,10 +236,15 @@ function attendance_month(int $guardId, string $ym): array
                 break;
             }
         }
+        $off = guard_day_off($weeklyOff, $leaves, $d);
         if ($shifts) {
             $status = max(array_column($shifts, 'late')) > 0 ? 'late' : 'present';
             $sum['present']++;
             if ($status === 'late') $sum['late']++;
+            if ($off) $sum['worked_off']++;
+        } elseif ($off && ($deployed || $off[0] === 'leave')) {
+            $status = $off[0];
+            $sum[$off[0]]++;
         } elseif ($d > $today) {
             $status = $deployed ? 'upcoming' : 'none';
         } elseif ($d === $today) {
@@ -193,7 +260,8 @@ function attendance_month(int $guardId, string $ym): array
         $sum['ot'] += $ot;
         $sum['ot_approved'] += $otOk;
         $days[] = ['date' => $d, 'day' => (int)substr($d, 8, 2), 'dow' => (int)date('w', strtotime($d)),
-                   'status' => $status, 'minutes' => $mins, 'ot' => $ot, 'ot_approved' => $otOk, 'shifts' => $shifts];
+                   'status' => $status, 'minutes' => $mins, 'ot' => $ot, 'ot_approved' => $otOk, 'shifts' => $shifts,
+                   'off' => $off[0] ?? null, 'off_label' => $off ? ($off[0] === 'leave' ? leave_type_label((string)$off[1]) : 'Weekly off') : null];
     }
     $sum['ot_unapproved'] = $sum['ot'] - $sum['ot_approved'];
     return ['month' => $ym, 'label' => date('F Y', strtotime($first)), 'days' => $days, 'summary' => $sum];
@@ -278,6 +346,8 @@ function run_live_checks(): void
                        FROM guards g LEFT JOIN attendance at ON at.guard_id = g.id AND at.status = 'open'
                       WHERE g.status = 'active'");
     $openLate = array_flip(array_map('intval', array_column(q_all("SELECT guard_id FROM alerts WHERE type = 'late' AND status <> 'resolved'"), 'guard_id')));
+    // Leaves around today (overnight shifts may have started yesterday).
+    $leaves = approved_leaves(array_column($guards, 'id'), date('Y-m-d', $now - 86400), date('Y-m-d', $now));
 
     foreach ($guards as $g) {
         $gid = (int)$g['id'];
@@ -332,6 +402,12 @@ function run_live_checks(): void
 
         // 4) Late / not reported for the shift
         $occ = asg_has_shift($asg) ? current_shift_occurrence($asg, $now) : null;
+        if ($occ && guard_day_off($g['weekly_off'], $leaves[$gid] ?? [], $occ['day'])) {
+            // Weekly off or approved leave: nobody expects this guard today.
+            if (isset($openLate[$gid])) resolve_guard_alerts($gid, ['late'], 'Weekly off / on leave today');
+            $occ = null;
+            continue;
+        }
         if ((int)$g['is_on_duty'] === 0 && $occ && $now >= $occ['start'] + $grace) {
             $checkedIn = q_val('SELECT 1 FROM attendance WHERE guard_id = ? AND check_in_at >= ? LIMIT 1',
                                [$gid, date('Y-m-d H:i:s', $occ['start'] - EARLY_CHECKIN_SEC)]);
@@ -393,14 +469,16 @@ function guard_map_status(array $g): array
     elseif (in_array('late', $types, true)) $status = 'late';
     else $status = 'off_duty';
 
-    if (!$onDuty && $status !== 'emergency') $sharing = ['off', 'Not sharing (off duty)'];
+    $offToday = !empty($g['leave_today']) ? leave_type_label((string)$g['leave_today']) . ' today'
+              : (in_array((int)date('w'), weekly_off_days($g['weekly_off'] ?? null), true) ? 'Weekly off today' : null);
+    if (!$onDuty && $status !== 'emergency') $sharing = ['off', $offToday ? 'Not sharing · ' . $offToday : 'Not sharing (off duty)'];
     elseif (!$online) $sharing = ['offline', 'No internet / phone off'];
     elseif ($gps === 'denied') $sharing = ['denied', 'Location permission off'];
     elseif ($gps === 'off') $sharing = ['gps_off', 'GPS turned off'];
     elseif (!$fixFresh) $sharing = ['waiting', 'Online, waiting for GPS'];
     else $sharing = ['live', 'Sharing live'];
 
-    return ['status' => $status, 'flags' => $flags, 'sharing' => $sharing[0], 'sharing_label' => $sharing[1], 'moving' => $moving];
+    return ['status' => $status, 'flags' => $flags, 'sharing' => $sharing[0], 'sharing_label' => $sharing[1], 'moving' => $moving, 'off_today' => $offToday];
 }
 
 function map_status_meta(string $s): array

@@ -104,6 +104,12 @@ require APP_ROOT . '/includes/layout/header.php';
                     <dt>Duties & Specialization</dt><dd><?= e($g['skills'] ?: '—') ?></dd>
                     <?php if ($g['is_armed']): ?><dt>Weapon licence</dt><dd><?= e($g['weapon_license_no'] ?: '—') ?></dd><?php endif; ?>
                     <dt>Joined</dt><dd><?= e(fmt_date($g['joined_on'])) ?></dd>
+                    <dt>Weekly off</dt><dd><?= e(weekly_off_label($g['weekly_off'] ?? null)) ?></dd>
+                    <?php $gl = q_all("SELECT from_date, to_date, leave_type, status FROM guard_leaves WHERE guard_id = ? AND status IN ('approved','pending') AND to_date >= CURDATE() ORDER BY from_date LIMIT 3", [$g['id']]); ?>
+                    <dt>Upcoming leave</dt><dd><?php if (!$gl): ?>—<?php endif; foreach ($gl as $l): ?>
+                        <div><?= e(fmt_date($l['from_date'], 'd M')) ?><?= $l['to_date'] !== $l['from_date'] ? ' – ' . e(fmt_date($l['to_date'], 'd M')) : '' ?> · <?= e(leave_type_label($l['leave_type'])) ?>
+                            <?= $l['status'] === 'pending' ? '<span class="badge badge-soft-warning">Waiting approval</span>' : '' ?></div><?php endforeach; ?>
+                        <a class="small" href="<?= url('admin/duty.php?tab=leave&guard_id=' . (int)$g['id']) ?>">Add / manage leave</a></dd>
                     <dt>Emergency</dt><dd><?= e($g['emergency_contact_name'] ?: '—') ?> <?= $g['emergency_contact_phone'] ? '· <a href="tel:' . e($g['emergency_contact_phone']) . '">' . e($g['emergency_contact_phone']) . '</a>' : '' ?></dd>
                     <dt>This month</dt><dd><?= (int)$month['shifts'] ?> shifts · <?= fmt_minutes((int)$month['mins']) ?></dd>
                 </dl>

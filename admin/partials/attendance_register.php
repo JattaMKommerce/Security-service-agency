@@ -11,14 +11,15 @@ $regGuards = q_all("SELECT g.id, g.full_name, g.employee_code, g.photo FROM guar
                      ORDER BY g.full_name",
                    $regClient ? [$ym . '-01', $regClient, date('Y-m-t', strtotime($ym . '-01')), $ym . '-01'] : [$ym . '-01']);
 $sheet = [];
-$tot = ['present' => 0, 'late' => 0, 'absent' => 0, 'minutes' => 0, 'ot' => 0, 'ot_approved' => 0];
+$tot = ['present' => 0, 'late' => 0, 'absent' => 0, 'weekly_off' => 0, 'leave' => 0, 'minutes' => 0, 'ot' => 0, 'ot_approved' => 0];
 foreach ($regGuards as $g) {
     $m = attendance_month((int)$g['id'], $ym);
     $sheet[] = ['g' => $g, 'm' => $m];
     foreach ($tot as $k => $_) $tot[$k] += $m['summary'][$k];
 }
 $daysIn = (int)date('t', strtotime($ym . '-01'));
-$cell = ['present' => ['P', 'reg-p'], 'late' => ['L', 'reg-l'], 'absent' => ['A', 'reg-a'], 'pending' => ['·', 'reg-n'], 'upcoming' => ['', 'reg-n'], 'none' => ['–', 'reg-n']];
+$cell = ['present' => ['P', 'reg-p'], 'late' => ['L', 'reg-l'], 'absent' => ['A', 'reg-a'], 'weekly_off' => ['W', 'reg-w'], 'leave' => ['LV', 'reg-lv'],
+         'pending' => ['·', 'reg-n'], 'upcoming' => ['', 'reg-n'], 'none' => ['–', 'reg-n']];
 $prev = date('Y-m', strtotime($ym . '-01 -1 month'));
 $next = $ym < date('Y-m') ? date('Y-m', strtotime($ym . '-01 +1 month')) : null;
 $qs = fn(string $m) => url('admin/attendance.php?view=register&month=' . $m . ($regClient ? '&client_id=' . $regClient : ''));
@@ -61,7 +62,7 @@ $qs = fn(string $m) => url('admin/attendance.php?view=register&month=' . $m . ($
     <div class="stat-box-modern"><div class="stat-box-icon text-warning bg-warning-subtle"><i class="bi bi-alarm-fill"></i></div>
         <div class="stat-box-num"><?= $tot['late'] ?></div><div class="stat-box-lbl">Late days</div></div>
     <div class="stat-box-modern"><div class="stat-box-icon text-danger bg-danger-subtle"><i class="bi bi-person-x-fill"></i></div>
-        <div class="stat-box-num"><?= $tot['absent'] ?></div><div class="stat-box-lbl">Absent days</div></div>
+        <div class="stat-box-num"><?= $tot['absent'] ?></div><div class="stat-box-lbl">Absent days (<?= $tot['leave'] ?> leave, <?= $tot['weekly_off'] ?> weekly off not counted)</div></div>
     <div class="stat-box-modern"><div class="stat-box-icon text-purple bg-purple-subtle"><i class="bi bi-hourglass-split"></i></div>
         <div class="stat-box-num"><?= round($tot['ot'] / 60, 1) ?>h</div><div class="stat-box-lbl">Overtime (<?= round(($tot['ot'] - $tot['ot_approved']) / 60, 1) ?>h unapproved)</div></div>
 </div>
@@ -75,25 +76,28 @@ $qs = fn(string $m) => url('admin/attendance.php?view=register&month=' . $m . ($
                     <?php for ($d = 1; $d <= $daysIn; $d++): $dow = (int)date('w', strtotime($ym . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT))); ?>
                         <th class="text-center<?= $dow === 0 ? ' reg-sun' : '' ?>"><?= $d ?><div class="reg-dow"><?= ['S', 'M', 'T', 'W', 'T', 'F', 'S'][$dow] ?></div></th>
                     <?php endfor; ?>
-                    <th class="text-center">P</th><th class="text-center">L</th><th class="text-center">A</th>
+                    <th class="text-center">P</th><th class="text-center">L</th><th class="text-center">A</th><th class="text-center" title="Weekly off">W</th><th class="text-center" title="Leave">LV</th>
                     <th class="text-end">Hours</th><th class="text-end">OT</th><th class="text-end">OT approved</th>
                 </tr>
             </thead>
             <tbody>
             <?php if (!$sheet): ?>
-                <tr><td colspan="<?= $daysIn + 7 ?>"><div class="empty-state"><i class="bi bi-calendar-x"></i>No guards for this month</div></td></tr>
+                <tr><td colspan="<?= $daysIn + 9 ?>"><div class="empty-state"><i class="bi bi-calendar-x"></i>No guards for this month</div></td></tr>
             <?php endif; ?>
             <?php foreach ($sheet as ['g' => $g, 'm' => $m]): $s = $m['summary']; ?>
                 <tr>
                     <td class="reg-sticky"><a class="person" href="<?= url('admin/attendance.php?guard_id=' . $g['id'] . '&from=' . $ym . '-01&to=' . min(date('Y-m-d'), date('Y-m-t', strtotime($ym . '-01')))) ?>">
                         <?= avatar($g['full_name'], $g['photo'], 'sm') ?><span><span class="name d-block text-nowrap"><?= e($g['full_name']) ?></span><span class="sub"><?= e($g['employee_code']) ?></span></span></a></td>
                     <?php foreach ($m['days'] as $day): [$txt, $cls] = $cell[$day['status']];
-                        $tip = $day['shifts'] ? fmt_minutes($day['minutes']) . ($day['ot'] ? ' · OT ' . fmt_minutes($day['ot']) : '') : label($day['status']); ?>
-                        <td class="text-center <?= $cls ?><?= $day['ot'] ? ' reg-ot' : '' ?>" title="<?= e(fmt_date($day['date']) . ': ' . $tip) ?>"><?= $txt ?></td>
+                        $tip = $day['shifts'] ? fmt_minutes($day['minutes']) . ($day['ot'] ? ' · OT ' . fmt_minutes($day['ot']) : '') . ($day['off'] ? ' · worked on ' . strtolower((string)$day['off_label']) : '')
+                                              : ($day['off_label'] ?? label($day['status'])); ?>
+                        <td class="text-center <?= $cls ?><?= $day['ot'] ? ' reg-ot' : '' ?><?= $day['off'] && $day['shifts'] ? ' reg-woff' : '' ?>" title="<?= e(fmt_date($day['date']) . ': ' . $tip) ?>"><?= $txt ?></td>
                     <?php endforeach; ?>
                     <td class="text-center fw-semibold text-success"><?= $s['present'] ?></td>
                     <td class="text-center fw-semibold text-warning"><?= $s['late'] ?></td>
                     <td class="text-center fw-semibold text-danger"><?= $s['absent'] ?></td>
+                    <td class="text-center" style="color:#0284c7"><?= $s['weekly_off'] ?></td>
+                    <td class="text-center" style="color:#7c3aed"><?= $s['leave'] ?></td>
                     <td class="text-end text-nowrap"><?= round($s['minutes'] / 60, 1) ?>h</td>
                     <td class="text-end text-nowrap fw-semibold" style="color:#7c3aed"><?= $s['ot'] ? fmt_minutes($s['ot']) : '—' ?></td>
                     <td class="text-end text-nowrap"><?= $s['ot'] ? fmt_minutes($s['ot_approved']) : '—' ?></td>
@@ -104,6 +108,7 @@ $qs = fn(string $m) => url('admin/attendance.php?view=register&month=' . $m . ($
     </div>
     <div class="card-footer small text-muted">
         <span class="reg-key reg-p">P</span> Present · <span class="reg-key reg-l">L</span> Late · <span class="reg-key reg-a">A</span> Absent (deployed, no check-in) ·
+        <span class="reg-key reg-w">W</span> Weekly off · <span class="reg-key reg-lv">LV</span> Leave · <span class="reg-key reg-p reg-woff">P</span> worked on a day off ·
         <span class="reg-key reg-n">–</span> Not deployed · <span class="reg-key reg-p reg-ot">P</span> with overtime. Tap a guard for their shift log.
     </div>
 </div>

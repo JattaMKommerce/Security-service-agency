@@ -58,6 +58,9 @@ function guard_state(array $guard): array
     $ext = $shift ? q_one('SELECT id, status, requested_minutes, approved_minutes, reason, admin_note, requested_at, decided_at
                              FROM duty_extensions WHERE attendance_id = ? ORDER BY id DESC LIMIT 1', [$shift['id']]) : null;
     $approvedExt = $shift ? approved_extension_minutes((int)$shift['id']) : 0;
+    $myLeaves = q_all("SELECT id, from_date, to_date, leave_type, reason, status, requested_by, admin_note FROM guard_leaves
+                        WHERE guard_id = ? AND to_date >= ? ORDER BY from_date DESC LIMIT 8", [$gid, date('Y-m-d', strtotime('-45 days'))]);
+    $offToday = guard_day_off($guard['weekly_off'] ?? null, array_values(array_filter($myLeaves, fn($l) => $l['status'] === 'approved')), date('Y-m-d'));
     $handIn = q_all("SELECT h.id, h.site_name, h.items, h.notes, h.created_at, g.full_name AS from_name, g.employee_code AS from_code
                        FROM shift_handovers h JOIN guards g ON g.id = h.outgoing_guard_id
                       WHERE h.incoming_guard_id = ? AND h.status = 'pending' AND h.created_at >= ? ORDER BY h.id DESC LIMIT 3",
@@ -100,6 +103,15 @@ function guard_state(array $guard): array
             'approved_minutes' => $ext['approved_minutes'] !== null ? (int)$ext['approved_minutes'] : null,
             'reason' => $ext['reason'], 'note' => $ext['admin_note'], 'requested' => fmt_time(substr($ext['requested_at'], 11)),
         ] : null,
+        'today_off'   => $offToday ? ($offToday[0] === 'leave' ? 'You are on ' . strtolower(leave_type_label((string)$offToday[1])) . ' today.' : 'Today is your weekly off.') : null,
+        'weekly_off'  => weekly_off_label($guard['weekly_off'] ?? null),
+        'leaves'      => array_map(fn($l) => [
+            'id' => (int)$l['id'], 'type' => leave_type_label($l['leave_type']), 'status' => $l['status'],
+            'from' => fmt_date($l['from_date'], 'd M'), 'to' => fmt_date($l['to_date'], 'd M'),
+            'days' => (int)((strtotime($l['to_date']) - strtotime($l['from_date'])) / 86400) + 1,
+            'reason' => $l['reason'], 'note' => $l['admin_note'], 'by_admin' => $l['requested_by'] === 'admin',
+        ], $myLeaves),
+        'leave_types' => LEAVE_TYPES,
         'handover_in' => array_map(fn($h) => [
             'id' => (int)$h['id'], 'from' => $h['from_name'], 'from_code' => $h['from_code'], 'site' => $h['site_name'],
             'items' => $h['items'], 'notes' => $h['notes'], 'at' => fmt_datetime($h['created_at']),
