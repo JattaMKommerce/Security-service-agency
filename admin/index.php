@@ -97,12 +97,12 @@ require APP_ROOT . '/includes/layout/header.php';
             </div>
             <div class="card-body p-0"><div id="dashMap" class="dash-map-responsive"></div></div>
             <div class="card-footer bg-white small d-flex flex-wrap gap-3">
-                <span><span class="status-dot" style="background:#16a34a"></span>Live <strong data-count="on_duty">0</strong></span>
-                <span><span class="status-dot" style="background:#ca8a04"></span>No signal <strong data-count="offline_duty">0</strong></span>
-                <span><span class="status-dot" style="background:#ea580c"></span>Outside site <strong data-count="outside">0</strong></span>
-                <span><span class="status-dot" style="background:#dc2626"></span>SOS <strong data-count="sos">0</strong></span>
-                <span><span class="status-dot" style="background:#2563eb"></span>Assigned <strong data-count="assigned">0</strong></span>
-                <span><span class="status-dot" style="background:#64748b"></span>Available <strong data-count="available">0</strong></span>
+                <span><span class="status-dot" style="background:#16a34a"></span>On duty <strong data-count="on_duty">0</strong></span>
+                <span><span class="status-dot" style="background:#2563eb"></span>On patrol <strong data-count="patrol">0</strong></span>
+                <span><span class="status-dot" style="background:#ea580c"></span>Late <strong data-count="late">0</strong></span>
+                <span><span class="status-dot" style="background:#dc2626"></span>Emergency <strong data-count="emergency">0</strong></span>
+                <span><span class="status-dot" style="background:#94a3b8"></span>Off duty <strong data-count="off_duty">0</strong></span>
+                <span><i class="bi bi-exclamation-triangle text-danger me-1"></i>Problems <strong data-count="issues">0</strong></span>
             </div>
         </div>
     </div>

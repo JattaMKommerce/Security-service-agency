@@ -18,12 +18,16 @@ if (($gid = get_int('guard_id')) > 0) {
 }
 
 $rows = q_all(guards_live_sql(implode(' AND ', $where)) . ' ORDER BY g.full_name', $params);
-$counts = array_fill_keys(['sos', 'outside', 'on_duty', 'offline_duty', 'assigned', 'available', 'unavailable'], 0);
+maybe_run_live_checks();
+$counts = array_fill_keys(['emergency', 'late', 'patrol', 'on_duty', 'off_duty', 'issues', 'sharing'], 0);
 
 $guards = [];
 foreach ($rows as $g) {
-    $status = guard_live_status($g);
+    $ms = guard_map_status($g);
+    $status = $ms['status'];
     $counts[$status]++;
+    if ($ms['flags']) $counts['issues']++;
+    if ($ms['sharing'] === 'live') $counts['sharing']++;
     $guards[] = [
         'id'            => (int)$g['id'],
         'code'          => $g['employee_code'],
@@ -34,8 +38,13 @@ foreach ($rows as $g) {
         'photo'         => guard_photo_url($g['photo']),
         'armed'         => (bool)$g['is_armed'],
         'status'        => $status,
-        'status_label'  => live_status_meta($status)[0],
+        'status_label'  => map_status_meta($status)[0],
+        'flags'         => $ms['flags'],
+        'sharing'       => $ms['sharing'],
+        'sharing_label' => $ms['sharing_label'],
+        'last_ping_ago' => time_ago($g['last_ping_at'] ?? null),
         'on_duty'       => (bool)$g['is_on_duty'],
+        'duty_since'    => $g['duty_since'] ? fmt_datetime($g['duty_since']) : null,
         'lat'           => $g['last_lat'] !== null ? (float)$g['last_lat'] : null,
         'lng'           => $g['last_lng'] !== null ? (float)$g['last_lng'] : null,
         'accuracy'      => $g['last_accuracy'] !== null ? (int)round((float)$g['last_accuracy']) : null,

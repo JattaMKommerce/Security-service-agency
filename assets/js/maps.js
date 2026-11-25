@@ -3,14 +3,24 @@
     'use strict';
     const APP = window.APP = window.APP || {};
 
+    // Live map colours: green on duty, red emergency, orange late, grey off duty, blue on patrol (moving).
     const STATUS = {
-        sos:          { label: 'SOS Alert',           color: '#dc2626' },
-        outside:      { label: 'Outside Site',        color: '#ea580c' },
-        on_duty:      { label: 'On Duty (Live)',      color: '#16a34a' },
-        offline_duty: { label: 'On Duty (No Signal)', color: '#ca8a04' },
-        assigned:     { label: 'Assigned, Off Duty',  color: '#2563eb' },
-        available:    { label: 'Available',           color: '#64748b' },
-        unavailable:  { label: 'On Leave / Inactive', color: '#94a3b8' }
+        emergency: { label: 'Emergency (SOS)', color: '#dc2626' },
+        late:      { label: 'Late',            color: '#ea580c' },
+        patrol:    { label: 'On Patrol',       color: '#2563eb' },
+        on_duty:   { label: 'On Duty',         color: '#16a34a' },
+        off_duty:  { label: 'Off Duty',        color: '#94a3b8' },
+        // older names still used by single-alert maps
+        sos:       { label: 'SOS Alert',       color: '#dc2626' },
+        outside:   { label: 'Outside Site',    color: '#ea580c' }
+    };
+    const LEGEND = ['on_duty', 'patrol', 'late', 'emergency', 'off_duty'];
+    // Small badge on a marker for problems while on duty.
+    const FLAGS = {
+        outside:   { icon: 'bi-sign-turn-right-fill', label: 'Outside site',          color: '#ea580c' },
+        no_signal: { icon: 'bi-wifi-off',             label: 'No internet / signal',  color: '#dc2626' },
+        gps_off:   { icon: 'bi-geo-alt',              label: 'GPS off',               color: '#dc2626' },
+        idle:      { icon: 'bi-pause-fill',           label: 'Not moving for long',   color: '#ca8a04' }
     };
 
     function create(el, opts = {}) {
@@ -27,11 +37,13 @@
         return String(name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0] || '').join('').toUpperCase();
     }
 
-    function guardIcon(status, name) {
-        const s = STATUS[status] || STATUS.available;
+    function guardIcon(status, name, flags) {
+        const s = STATUS[status] || STATUS.off_duty;
+        const f = (flags || []).map((k) => FLAGS[k]).filter(Boolean)[0];
         return L.divIcon({
-            className: 'guard-pin' + (status === 'sos' ? ' pulse' : ''),
-            html: '<div class="pin" style="background:' + s.color + '"><span>' + APP.esc(initialsOf(name)) + '</span></div>',
+            className: 'guard-pin' + (status === 'sos' || status === 'emergency' ? ' pulse' : ''),
+            html: '<div class="pin" style="background:' + s.color + '"><span>' + APP.esc(initialsOf(name)) + '</span></div>' +
+                (f ? '<span class="pin-flag" style="background:' + f.color + '" title="' + f.label + '"><i class="bi ' + f.icon + '"></i></span>' : ''),
             iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -32]
         });
     }
@@ -44,8 +56,10 @@
         const ctl = L.control({ position: 'bottomleft' });
         ctl.onAdd = function () {
             const div = L.DomUtil.create('div', 'legend');
-            div.innerHTML = Object.values(STATUS).map((s) =>
-                '<div><span class="status-dot" style="background:' + s.color + '"></span>' + s.label + '</div>').join('');
+            div.innerHTML = LEGEND.map((k) =>
+                '<div><span class="status-dot" style="background:' + STATUS[k].color + '"></span>' + STATUS[k].label + '</div>').join('') +
+                '<div class="legend-flags">' + Object.values(FLAGS).map((f) =>
+                '<span title="' + f.label + '"><i class="bi ' + f.icon + '" style="color:' + f.color + '"></i> ' + f.label + '</span>').join('') + '</div>';
             return div;
         };
         ctl.addTo(map);
@@ -122,5 +136,5 @@
         return { map, set };
     }
 
-    APP.map = { STATUS, create, guardIcon, siteIcon, legend, picker, initialsOf };
+    APP.map = { STATUS, FLAGS, create, guardIcon, siteIcon, legend, picker, initialsOf };
 })();
