@@ -12,3 +12,6 @@ storage/selfies/
 *.jks
 signing-key-info.txt
 storage/fcm-service-account.json
+
+# Server-specific settings (live database password) — never commit
+config/config.local.php
