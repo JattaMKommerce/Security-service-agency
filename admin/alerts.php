@@ -41,7 +41,7 @@ $where = ['1=1'];
 $params = [];
 if ($status === 'unresolved') $where[] = "al.status <> 'resolved'";
 elseif (in_array($status, ['open', 'acknowledged', 'resolved'], true)) { $where[] = 'al.status = ?'; $params[] = $status; }
-if (in_array($type, ['sos', 'geofence_exit'], true)) { $where[] = 'al.type = ?'; $params[] = $type; }
+if (in_array($type, ALERT_TYPES, true)) { $where[] = 'al.type = ?'; $params[] = $type; }
 $p = paginate('FROM alerts al JOIN guards g ON g.id = al.guard_id LEFT JOIN clients c ON c.id = al.client_id WHERE ' . implode(' AND ', $where),
     $params, 'al.*, g.full_name, g.employee_code, c.name AS client_name', "(al.status = 'open') DESC, al.id DESC", 30);
 
@@ -49,7 +49,7 @@ $alertStats = q_one("SELECT
     COUNT(*) total,
     COALESCE(SUM(status <> 'resolved'), 0) unresolved_cnt,
     COALESCE(SUM(type = 'sos' AND status <> 'resolved'), 0) sos_cnt,
-    COALESCE(SUM(type = 'geofence_exit' AND status <> 'resolved'), 0) geo_cnt,
+    COALESCE(SUM(type <> 'sos' AND status <> 'resolved'), 0) geo_cnt,
     COALESCE(SUM(status = 'resolved'), 0) resolved_cnt
 FROM alerts");
 
@@ -89,12 +89,12 @@ require APP_ROOT . '/includes/layout/header.php';
         <div class="stat-box-lbl">SOS Alarms</div>
     </a>
     <!-- Left Site -->
-    <a href="?status=unresolved&type=geofence_exit" class="stat-box-modern text-decoration-none">
+    <a href="?status=unresolved" class="stat-box-modern text-decoration-none">
         <div class="stat-box-icon text-warning bg-warning-subtle">
             <i class="bi bi-sign-turn-right-fill"></i>
         </div>
         <div class="stat-box-num"><?= (int)$alertStats['geo_cnt'] ?></div>
-        <div class="stat-box-lbl">Left Site</div>
+        <div class="stat-box-lbl">Site &amp; Tracking</div>
     </a>
     <!-- Resolved -->
     <a href="?status=resolved" class="stat-box-modern text-decoration-none">
@@ -106,11 +106,11 @@ require APP_ROOT . '/includes/layout/header.php';
     </a>
 </div>
 
-<?php if ($detail): $isSos = $detail['type'] === 'sos'; ?>
+<?php if ($detail): $isSos = $detail['type'] === 'sos'; [$dTitle, $dIcon] = alert_type_meta($detail['type']); ?>
 <div class="card mb-3 border-<?= $isSos ? 'danger' : 'warning' ?>">
     <div class="card-header d-flex align-items-center gap-2 <?= $isSos && $detail['status'] !== 'resolved' ? 'text-bg-danger' : '' ?>">
-        <i class="bi <?= $isSos ? 'bi-exclamation-octagon-fill' : 'bi-sign-turn-right-fill' ?>"></i>
-        <strong><?= $isSos ? 'SOS / Panic alert' : 'Guard left the duty site' ?> #<?= (int)$detail['id'] ?></strong>
+        <i class="bi <?= $dIcon ?>"></i>
+        <strong><?= $isSos ? 'SOS / Panic alert' : ($detail['type'] === 'geofence_exit' ? 'Guard left the duty site' : e($dTitle)) ?> #<?= (int)$detail['id'] ?></strong>
         <span class="ms-auto"><?= status_badge($detail['status']) ?></span>
     </div>
     <div class="card-body">
@@ -160,10 +160,14 @@ require APP_ROOT . '/includes/layout/header.php';
                 </a>
             <?php endforeach; ?>
         </div>
-        <div class="btn-group btn-group-sm">
+        <div class="btn-group btn-group-sm flex-wrap">
             <a href="?status=<?= e($status) ?>" class="btn <?= $type === '' ? 'btn-secondary text-white' : 'btn-outline-secondary' ?>">All</a>
             <a href="?status=<?= e($status) ?>&type=sos" class="btn <?= $type === 'sos' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">SOS</a>
             <a href="?status=<?= e($status) ?>&type=geofence_exit" class="btn <?= $type === 'geofence_exit' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Left site</a>
+            <a href="?status=<?= e($status) ?>&type=late" class="btn <?= $type === 'late' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Late</a>
+            <a href="?status=<?= e($status) ?>&type=no_movement" class="btn <?= $type === 'no_movement' ? 'btn-warning text-dark' : 'btn-outline-warning' ?>">Not moving</a>
+            <a href="?status=<?= e($status) ?>&type=gps_off" class="btn <?= $type === 'gps_off' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">GPS off</a>
+            <a href="?status=<?= e($status) ?>&type=offline" class="btn <?= $type === 'offline' ? 'btn-danger text-white' : 'btn-outline-danger' ?>">No signal</a>
         </div>
     </div>
 </div>
@@ -191,7 +195,7 @@ require APP_ROOT . '/includes/layout/header.php';
                 <!-- Icon -->
                 <div class="flex-shrink-0">
                     <span class="guard-avatar-initials-sm" style="background:<?= $isSosAlert ? '#dc2626' : '#d97706' ?>;font-size:1.2rem;">
-                        <i class="bi <?= $isSosAlert ? 'bi-exclamation-octagon-fill' : 'bi-sign-turn-right-fill' ?>"></i>
+                        <i class="bi <?= alert_type_meta($a['type'])[1] ?>"></i>
                     </span>
                 </div>
 
@@ -205,7 +209,7 @@ require APP_ROOT . '/includes/layout/header.php';
                         <?= e($a['employee_code']) ?><?= $a['client_name'] ? ' · ' . e($a['client_name']) : '' ?>
                     </div>
                     <div class="small fw-semibold text-truncate mt-1 <?= $isSosAlert ? 'text-danger' : 'text-dark' ?>">
-                        <?= e($a['message'] ?: ($isSosAlert ? 'SOS panic alert triggered' : 'Left assigned post')) ?>
+                        <?= e($a['message'] ?: ($isSosAlert ? 'SOS panic alert triggered' : alert_type_meta($a['type'])[0])) ?>
                     </div>
                     <div class="small text-muted mt-1" style="font-size:0.72rem;">
                         <i class="bi bi-clock me-1"></i><?= e(time_ago($a['created_at'])) ?> (<?= e(fmt_datetime($a['created_at'])) ?>)

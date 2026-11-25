@@ -644,3 +644,49 @@ html, body {
     .legend { font-size: .66rem; line-height: 1.45; padding: .35rem .5rem; }
     .kv { grid-template-columns: 110px 1fr; }
 }
+
+/* Duty selfie thumbnails */
+.selfie-thumb { object-fit: cover; border-radius: 10px; border: 2px solid #e2e8f0; background: #f1f5f9; }
+.selfie-sm { width: 42px; height: 42px; }
+.selfie-lg { width: 120px; height: 150px; border-radius: 14px; }
+
+/* Monthly attendance register */
+.reg-table th, .reg-table td { font-size: .78rem; padding: .35rem .3rem; }
+.reg-table td.reg-p, .reg-table td.reg-l, .reg-table td.reg-a { font-weight: 700; }
+.reg-p { background: #dcfce7 !important; color: #166534; }
+.reg-l { background: #ffedd5 !important; color: #9a3412; }
+.reg-a { background: #fee2e2 !important; color: #991b1b; }
+.reg-n { color: #cbd5e1; }
+.reg-ot { box-shadow: inset 0 -3px 0 #7c3aed; }
+.reg-sun { color: #dc2626; }
+.reg-dow { font-size: .62rem; color: #94a3b8; font-weight: 600; }
+.reg-sticky { position: sticky; left: 0; background: #fff; z-index: 1; min-width: 170px; box-shadow: 1px 0 0 #e5e7eb; }
+.reg-key { display: inline-block; min-width: 18px; text-align: center; border-radius: 4px; font-weight: 700; padding: 0 3px; }
+.g-note-admin { background: #fffbeb; color: #92400e; border-radius: 10px; padding: .5rem .75rem; font-size: .88rem; }
+
+/* Live map: problem badge on guard pins, legend flags, route stops */
+.guard-pin { position: relative; }
+.guard-pin .pin-flag { position: absolute; top: -8px; right: -10px; width: 19px; height: 19px; border-radius: 50%; border: 2px solid #fff; color: #fff; display: grid; place-items: center; font-size: .62rem; box-shadow: 0 2px 5px rgba(0,0,0,.3); }
+.legend-flags { border-top: 1px solid var(--line); margin-top: .25rem; padding-top: .25rem; display: flex; flex-direction: column; line-height: 1.6; }
+.stop-pin, .alert-pin { background: none; border: none; }
+.stop-pin div { background: #0f172a; color: #fff; border-radius: 6px; font-size: .68rem; font-weight: 700; text-align: center; line-height: 20px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,.3); }
+.alert-pin div { width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: #fff; display: grid; place-items: center; border: 2px solid #fff; font-size: .8rem; }
+
+/* Location history panel over the tracking map */
+.tracking-map-wrap { position: relative; height: 100%; min-height: 0; }
+.tracking-map-wrap .tracking-map { height: 100%; }
+.hist-panel { position: absolute; top: 10px; right: 10px; z-index: 800; width: 300px; max-width: calc(100% - 20px); background: #fff; border-radius: 12px; box-shadow: var(--shadow); font-size: .85rem; }
+.hist-toggle { width: 100%; border: 0; background: none; padding: .55rem .8rem; font-weight: 700; text-align: left; }
+.hist-body { display: none; padding: 0 .8rem .8rem; max-height: 60vh; overflow-y: auto; }
+.hist-panel.open .hist-body { display: block; }
+.hist-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem; text-align: center; }
+.hist-stats div { background: #f8fafc; border-radius: 8px; padding: .3rem .1rem; }
+.hist-stats strong { display: block; font-size: .78rem; }
+.hist-stats span { font-size: .62rem; color: var(--muted); }
+.hist-stop { cursor: pointer; padding: .15rem 0; }
+.hist-stop:hover { color: var(--brand, #2563eb); }
+.hist-player { border-top: 1px solid var(--line); margin-top: .6rem; padding-top: .5rem; }
+@media (max-width: 991.98px) {
+    .tracking-map-wrap { order: 1; height: 55vh; }
+    .hist-panel { width: auto; left: 10px; right: 60px; }
+}

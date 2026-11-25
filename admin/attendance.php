@@ -13,6 +13,7 @@ if (is_post() && ($_POST['action'] ?? '') === 'close') {
     redirect(safe_back_url('admin/attendance.php'));
 }
 
+$view = get_str('view', 10) === 'register' ? 'register' : 'log';
 $guardId = get_int('guard_id');
 $clientId = get_int('client_id');
 $from = get_str('from', 10);
@@ -35,7 +36,8 @@ $summary = q_one("SELECT COUNT(*) shifts, COUNT(DISTINCT at.guard_id) guards,
                          COALESCE(SUM(COALESCE(at.duration_minutes, TIMESTAMPDIFF(MINUTE, at.check_in_at, NOW()))),0) mins,
                          SUM(at.status = 'open') open_now $fromSql", $params);
 $p = paginate($fromSql, $params,
-    'at.*, g.full_name, g.employee_code, g.photo, c.name AS client_name, a.site_name, a.shift_start',
+    'at.*, g.full_name, g.employee_code, g.photo, c.name AS client_name, a.site_name, a.shift_start,
+     (SELECT COALESCE(SUM(x.approved_minutes),0) FROM duty_extensions x WHERE x.attendance_id = at.id AND x.status = \'approved\') AS ext_approved',
     'at.check_in_at DESC', 40);
 
 $guards = q_all('SELECT id, full_name, employee_code FROM guards ORDER BY full_name');
@@ -44,6 +46,16 @@ $clients = q_all('SELECT id, name FROM clients ORDER BY name');
 $pageTitle = 'Attendance';
 $activeNav = 'attendance';
 require APP_ROOT . '/includes/layout/header.php';
+
+$viewTabs = '<div class="btn-group w-100 mb-3" role="group">'
+    . '<a href="' . url('admin/attendance.php') . '" class="btn ' . ($view === 'log' ? 'btn-primary' : 'btn-outline-primary bg-white') . ' fw-semibold"><i class="bi bi-list-ul me-1"></i>Shift log</a>'
+    . '<a href="' . url('admin/attendance.php?view=register') . '" class="btn ' . ($view === 'register' ? 'btn-primary' : 'btn-outline-primary bg-white') . ' fw-semibold"><i class="bi bi-calendar3 me-1"></i>Monthly register</a></div>';
+
+if ($view === 'register') {
+    require APP_ROOT . '/admin/partials/attendance_register.php';
+    require APP_ROOT . '/includes/layout/footer.php';
+    exit;
+}
 
 $activeFilterCount = 0;
 if ($guardId > 0) $activeFilterCount++;
@@ -61,6 +73,8 @@ if ($status !== '') $activeFilterCount++;
         <i class="bi bi-calendar-check"></i>
     </div>
 </div>
+
+<?= $viewTabs ?>
 
 <!-- 2. Summary Statistics Section (4 Clean Cards) -->
 <div class="stat-grid-4">
@@ -171,7 +185,7 @@ if ($status !== '') $activeFilterCount++;
     <?php endif; ?>
 
     <?php foreach ($p['rows'] as $r):
-        $late = $r['shift_start'] && strtotime(date('H:i:s', strtotime($r['check_in_at']))) > strtotime($r['shift_start']) + 900;
+        [$late, $ot, $otOk] = attendance_row_flags($r);
         $openDuration = (int)round((time() - strtotime($r['check_in_at'])) / 60);
     ?>
         <div class="guard-mobile-card mb-2">
@@ -198,7 +212,7 @@ if ($status !== '') $activeFilterCount++;
                     </div>
                     <div class="small text-muted text-truncate mt-1">
                         <i class="bi bi-box-arrow-in-right text-success me-1"></i>In: <?= e(fmt_datetime($r['check_in_at'])) ?>
-                        <?php if ($late): ?><span class="badge bg-warning-subtle text-warning ms-1">Late</span><?php endif; ?>
+                        <?php if ($late): ?><span class="badge bg-warning-subtle text-warning ms-1">Late<?= $late > 1 ? ' ' . fmt_minutes($late) : '' ?></span><?php endif; ?>
                     </div>
                     <?php if ($r['check_out_at']): ?>
                         <div class="small text-muted text-truncate">
@@ -220,6 +234,8 @@ if ($status !== '') $activeFilterCount++;
                     <div class="fw-bold fs-6 mb-1 <?= $r['status'] === 'open' ? 'text-success' : 'text-dark' ?>">
                         <?= $r['status'] === 'open' ? fmt_minutes($openDuration) : fmt_minutes($r['duration_minutes'] !== null ? (int)$r['duration_minutes'] : null) ?>
                     </div>
+                    <?= ot_badge($ot, $otOk) ?>
+                    <?= selfie_thumb($r) ?>
                     <?php if ($r['status'] === 'open'): ?>
                         <form method="post" data-confirm="Check this guard out now?">
                             <?= csrf_field() ?>
@@ -244,6 +260,7 @@ if ($status !== '') $activeFilterCount++;
             <thead>
                 <tr>
                     <th>Bodyguard</th>
+                    <th>Selfie</th>
                     <th>Client / site</th>
                     <th>Check in</th>
                     <th>Check out</th>
@@ -254,19 +271,21 @@ if ($status !== '') $activeFilterCount++;
             </thead>
             <tbody>
             <?php if (!$p['rows']): ?>
-                <tr><td colspan="7"><div class="empty-state"><i class="bi bi-calendar-x"></i>No shifts in this period</div></td></tr>
+                <tr><td colspan="8"><div class="empty-state"><i class="bi bi-calendar-x"></i>No shifts in this period</div></td></tr>
             <?php endif; ?>
             <?php foreach ($p['rows'] as $r):
-                $late = $r['shift_start'] && strtotime(date('H:i:s', strtotime($r['check_in_at']))) > strtotime($r['shift_start']) + 900; ?>
+                [$late, $ot, $otOk] = attendance_row_flags($r); ?>
                 <tr>
                     <td><a class="person" href="<?= url('admin/guard_view.php?id=' . $r['guard_id']) ?>"><?= avatar($r['full_name'], $r['photo'], 'sm') ?>
                         <span><span class="name d-block"><?= e($r['full_name']) ?></span><span class="sub"><?= e($r['employee_code']) ?></span></span></a></td>
+                    <td><?= selfie_thumb($r) ?: '<span class="small text-muted">—</span>' ?></td>
                     <td class="small"><?= e($r['client_name'] ?? 'No client') ?><div class="text-muted"><?= e($r['site_name'] ?? '') ?></div></td>
                     <td class="small text-nowrap"><?= e(fmt_datetime($r['check_in_at'])) ?>
-                        <?= $late ? '<span class="badge badge-soft-warning ms-1">Late</span>' : '' ?>
+                        <?= $late ? '<span class="badge badge-soft-warning ms-1">Late' . ($late > 1 ? ' ' . fmt_minutes($late) : '') . '</span>' : '' ?>
                         <?php if ($r['check_in_distance_m'] !== null): ?><div class="text-muted"><?= (int)$r['check_in_distance_m'] ?> m from site</div><?php endif; ?></td>
                     <td class="small text-nowrap"><?= e(fmt_datetime($r['check_out_at'])) ?><?= $r['notes'] ? '<div class="text-muted">' . e($r['notes']) . '</div>' : '' ?></td>
-                    <td class="fw-semibold"><?= $r['status'] === 'open' ? '<span class="text-success">' . fmt_minutes((int)round((time() - strtotime($r['check_in_at'])) / 60)) . '…</span>' : fmt_minutes($r['duration_minutes'] !== null ? (int)$r['duration_minutes'] : null) ?></td>
+                    <td class="fw-semibold"><?= $r['status'] === 'open' ? '<span class="text-success">' . fmt_minutes((int)round((time() - strtotime($r['check_in_at'])) / 60)) . '…</span>' : fmt_minutes($r['duration_minutes'] !== null ? (int)$r['duration_minutes'] : null) ?>
+                        <?= ot_badge($ot, $otOk) ?></td>
                     <td><?= status_badge($r['status']) ?></td>
                     <td class="text-end">
                         <?php if ($r['status'] === 'open'): ?>

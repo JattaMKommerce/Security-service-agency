@@ -117,7 +117,8 @@ function request_data(): array
     if ($data !== null) return $data;
     $ct = $_SERVER['CONTENT_TYPE'] ?? '';
     if (str_contains($ct, 'application/json')) {
-        $raw = file_get_contents('php://input', false, null, 0, 65536);
+        // Large enough for a compressed duty selfie sent as base64.
+        $raw = file_get_contents('php://input', false, null, 0, 3_000_000);
         $decoded = json_decode((string)$raw, true);
         $data = is_array($decoded) ? $decoded : [];
     } else {
@@ -337,10 +338,10 @@ function status_badge(string $status): string
         'closed' => 'success', 'auto_closed' => 'secondary',
         'draft' => 'secondary', 'sent' => 'info', 'paid' => 'success', 'partially_paid' => 'warning',
         'on_duty' => 'success', 'off_duty' => 'secondary', 'available' => 'info', 'assigned' => 'primary',
-        'sos' => 'danger', 'geofence_exit' => 'warning',
+        'sos' => 'danger', 'geofence_exit' => 'warning', 'late' => 'warning', 'no_movement' => 'warning', 'gps_off' => 'danger', 'offline' => 'danger',
     ];
     $cls = $map[$status] ?? 'secondary';
-    $text = $status === 'geofence_exit' ? 'Left Site' : ($status === 'sos' ? 'SOS' : label($status));
+    $text = in_array($status, ['geofence_exit', 'late', 'no_movement', 'gps_off', 'offline'], true) ? alert_type_meta($status)[0] : ($status === 'sos' ? 'SOS' : label($status));
     return '<span class="badge badge-soft-' . $cls . '">' . e($text) . '</span>';
 }
 

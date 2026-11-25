@@ -11,4 +11,11 @@ if ($r) {
     log_activity('attendance.check_out', 'shift ' . fmt_minutes($r['duration_minutes']));
 }
 $g = q_one('SELECT * FROM guards WHERE id = ?', [$guard['id']]);
-json_out(guard_state($g) + ['message' => $r ? 'Duty ended. Total: ' . fmt_minutes($r['duration_minutes']) . '.' : 'You were not on duty.']);
+$msg = 'You were not on duty.';
+if ($r) {
+    $msg = 'Duty ended. Total: ' . fmt_minutes($r['duration_minutes']) . '.';
+    if ($r['overtime_minutes']) {
+        $msg .= ' Overtime: ' . fmt_minutes($r['overtime_minutes']) . ($r['approved_ot_minutes'] < $r['overtime_minutes'] ? ' (' . fmt_minutes($r['overtime_minutes'] - $r['approved_ot_minutes']) . ' not approved)' : ' (approved)') . '.';
+    }
+}
+json_out(guard_state($g) + ['message' => $msg]);

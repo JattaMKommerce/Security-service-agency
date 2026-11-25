@@ -3,3 +3,6 @@ Thumbs.db
 *.log
 storage/*.log
 
+
+# Guard duty selfies (personal data, never commit)
+storage/selfies/

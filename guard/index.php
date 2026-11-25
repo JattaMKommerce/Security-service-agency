@@ -22,7 +22,7 @@ $title = 'Duty';
     </form>
 </header>
 
-<main class="g-main">
+<main class="g-main" id="viewDuty">
     <div id="netBanner" class="g-banner g-banner-warn d-none"><i class="bi bi-wifi-off"></i> <span>No internet — locations are saved and will be sent automatically.</span></div>
     <div id="gpsBanner" class="g-banner g-banner-danger d-none"><i class="bi bi-geo-alt"></i> <span id="gpsBannerText"></span></div>
 
@@ -35,6 +35,9 @@ $title = 'Duty';
         <button class="btn btn-light w-100 mt-3 fw-semibold" id="sosCancel"><i class="bi bi-check-circle"></i> I am safe — cancel SOS</button>
     </section>
 
+    <!-- Incoming handover waiting for this guard -->
+    <div id="handInBox"></div>
+
     <!-- Assignment -->
     <section class="g-card">
         <div class="g-label">Current duty</div>
@@ -45,8 +48,14 @@ $title = 'Duty';
     <section class="g-card text-center">
         <div id="dutyState" class="g-duty-state off">OFF DUTY</div>
         <div id="dutyTimer" class="g-timer d-none">00:00:00</div>
-        <div id="dutySince" class="small text-muted mb-3"></div>
-        <button id="dutyBtn" class="btn btn-lg w-100 g-duty-btn start" disabled><i class="bi bi-play-circle-fill"></i> <span>Start Duty</span></button>
+        <div id="dutySince" class="small text-muted mb-2"></div>
+        <div id="shiftInfo" class="g-shift-info d-none"></div>
+        <button id="dutyBtn" class="btn btn-lg w-100 g-duty-btn start mt-2" disabled><i class="bi bi-camera-fill"></i> <span>Start Duty</span></button>
+        <div id="dutyActions" class="g-duty-actions d-none">
+            <button class="btn btn-outline-primary" id="extBtn"><i class="bi bi-hourglass-split"></i> Extra hours</button>
+            <button class="btn btn-outline-dark" id="handBtn"><i class="bi bi-arrow-left-right"></i> Hand over</button>
+        </div>
+        <div id="extBox"></div>
         <div id="trackInfo" class="g-track small mt-3 d-none">
             <span class="g-pulse"></span>
             <span id="trackText">Sharing live location…</span>
@@ -84,6 +93,7 @@ $title = 'Duty';
     <section class="g-card">
         <div class="d-flex justify-content-between mb-2"><span class="g-label mb-0">This month</span><span class="small fw-semibold" id="monthStats">—</span></div>
         <div id="recentList" class="small"></div>
+        <button class="btn btn-sm btn-light w-100 mt-2 fw-semibold" data-goto="history"><i class="bi bi-calendar3"></i> Full attendance history</button>
     </section>
 
     <section class="g-card small text-muted" id="tips">
@@ -94,6 +104,86 @@ $title = 'Duty';
         </ul>
     </section>
 </main>
+
+<!-- Attendance history -->
+<main class="g-main d-none" id="viewHistory">
+    <section class="g-card">
+        <div class="d-flex align-items-center justify-content-between">
+            <button class="btn btn-light btn-sm" id="histPrev" aria-label="Previous month"><i class="bi bi-chevron-left"></i></button>
+            <div class="fw-bold" id="histLabel">—</div>
+            <button class="btn btn-light btn-sm" id="histNext" aria-label="Next month"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div class="g-stats mt-3" id="histStats"></div>
+    </section>
+    <section class="g-card">
+        <div class="g-cal-head"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+        <div class="g-cal" id="histCal"></div>
+        <div class="g-cal-legend">
+            <span><i class="present"></i>Present</span><span><i class="late"></i>Late</span><span><i class="absent"></i>Absent</span><span><i class="none"></i>No duty</span>
+        </div>
+    </section>
+    <section class="g-card">
+        <div class="g-label" id="histDayLabel">Daily attendance</div>
+        <div id="histDays" class="small"><div class="text-muted">Loading…</div></div>
+    </section>
+</main>
+
+<nav class="g-tabs">
+    <button class="active" data-goto="duty"><i class="bi bi-shield-check"></i><span>Duty</span></button>
+    <button data-goto="history"><i class="bi bi-calendar3"></i><span>Attendance</span></button>
+</nav>
+
+<!-- Selfie sheet -->
+<div class="g-sheet" id="sheetSelfie" aria-hidden="true">
+    <div class="g-sheet-box">
+        <div class="g-sheet-title">Duty selfie <button class="g-sheet-x" data-close aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+        <p class="small text-muted mb-2">Look at the camera in your uniform. Your selfie is sent to the control room with your check-in.</p>
+        <div class="g-cam">
+            <video id="camVideo" playsinline autoplay muted></video>
+            <img id="camShot" alt="Your selfie" class="d-none">
+            <div id="camMsg" class="g-cam-msg d-none"></div>
+        </div>
+        <input type="file" accept="image/*" capture="user" id="camFile" class="d-none">
+        <div class="d-grid gap-2 mt-3">
+            <button class="btn btn-lg btn-dark fw-bold" id="camSnap"><i class="bi bi-camera-fill"></i> Take selfie</button>
+            <button class="btn btn-lg g-duty-btn start d-none" id="camUse"><i class="bi bi-play-circle-fill"></i> Use photo &amp; Start Duty</button>
+            <button class="btn btn-light d-none" id="camRetake"><i class="bi bi-arrow-counterclockwise"></i> Retake</button>
+        </div>
+    </div>
+</div>
+
+<!-- Extra hours sheet -->
+<div class="g-sheet" id="sheetExt" aria-hidden="true">
+    <div class="g-sheet-box">
+        <div class="g-sheet-title">Request extra hours <button class="g-sheet-x" data-close aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+        <p class="small text-muted mb-2" id="extShiftText"></p>
+        <label class="form-label small fw-semibold">How much extra time?</label>
+        <div class="g-pills mb-3" id="extMinutes">
+            <button type="button" data-min="30">30 min</button><button type="button" data-min="60" class="active">1 hr</button>
+            <button type="button" data-min="120">2 hrs</button><button type="button" data-min="180">3 hrs</button>
+            <button type="button" data-min="240">4 hrs</button><button type="button" data-min="480">8 hrs</button>
+        </div>
+        <label class="form-label small fw-semibold" for="extReason">Reason</label>
+        <textarea class="form-control mb-3" id="extReason" rows="2" maxlength="255" placeholder="e.g. Relief guard has not arrived / client asked me to stay"></textarea>
+        <button class="btn btn-lg btn-primary w-100 fw-bold" id="extSend"><i class="bi bi-send-fill"></i> Send request</button>
+    </div>
+</div>
+
+<!-- Handover sheet -->
+<div class="g-sheet" id="sheetHand" aria-hidden="true">
+    <div class="g-sheet-box">
+        <div class="g-sheet-title">Shift handover <button class="g-sheet-x" data-close aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+        <p class="small text-muted mb-2">Hand over your post to the next guard. Your duty ends when you submit.</p>
+        <label class="form-label small fw-semibold" for="handGuard">Incoming guard (taking over)</label>
+        <select class="form-select mb-3" id="handGuard"><option value="">Loading…</option></select>
+        <label class="form-label small fw-semibold">Items handed over</label>
+        <div class="g-checks mb-2" id="handItems"></div>
+        <input class="form-control mb-3" id="handOther" maxlength="150" placeholder="Other items (optional)">
+        <label class="form-label small fw-semibold" for="handNotes">Notes for the next guard</label>
+        <textarea class="form-control mb-3" id="handNotes" rows="3" maxlength="1000" placeholder="e.g. Gate 2 lock is faulty. Expecting a delivery at 9 PM."></textarea>
+        <button class="btn btn-lg btn-dark w-100 fw-bold" id="handSend"><i class="bi bi-arrow-left-right"></i> Hand over &amp; End Duty</button>
+    </div>
+</div>
 
 <div class="g-toast" id="gToast"></div>
 

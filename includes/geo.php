@@ -155,7 +155,7 @@ function run_maintenance(): void
 
     // 2) Auto-close shifts the guard forgot to end.
     $cut = date('Y-m-d H:i:s', time() - MAX_SHIFT_HOURS * 3600);
-    $stale = q_all('SELECT a.id, a.guard_id, a.check_in_at, g.last_seen_at
+    $stale = q_all('SELECT a.id, a.guard_id, a.check_in_at, a.shift_end_at, g.last_seen_at
                       FROM attendance a JOIN guards g ON g.id = a.guard_id
                      WHERE a.status = \'open\' AND a.check_in_at < ?', [$cut]);
     foreach ($stale as $s) {
@@ -163,10 +163,13 @@ function run_maintenance(): void
         $maxOut = date('Y-m-d H:i:s', strtotime($s['check_in_at']) + MAX_SHIFT_HOURS * 3600);
         if ($out > $maxOut) $out = $maxOut;
         $mins = (int)round((strtotime($out) - strtotime($s['check_in_at'])) / 60);
-        q('UPDATE attendance SET check_out_at = ?, duration_minutes = ?, status = \'auto_closed\',
-                  notes = \'Auto-closed: guard did not check out\' WHERE id = ? AND status = \'open\'', [$out, $mins, $s['id']]);
+        [$ot, $otOk] = compute_overtime($s, strtotime($out));
+        q('UPDATE attendance SET check_out_at = ?, duration_minutes = ?, overtime_minutes = ?, approved_ot_minutes = ?, status = \'auto_closed\',
+                  notes = \'Auto-closed: guard did not check out\' WHERE id = ? AND status = \'open\'', [$out, $mins, $ot, $otOk, $s['id']]);
         q('UPDATE guards SET is_on_duty = 0 WHERE id = ?', [$s['guard_id']]);
+        q("UPDATE duty_extensions SET status = 'cancelled', admin_note = 'Shift auto-closed' WHERE attendance_id = ? AND status = 'pending'", [$s['id']]);
     }
+    purge_old_selfies();
     q('DELETE FROM activity_log WHERE created_at < ? LIMIT 20000', [date('Y-m-d H:i:s', time() - 365 * 86400)]);
 }
 
@@ -206,10 +209,13 @@ function guards_live_sql(string $where = '1=1'): string
 {
     return "SELECT g.id, g.employee_code, g.category, g.full_name, g.phone, g.photo, g.status, g.is_on_duty, g.is_armed,
                    g.last_lat, g.last_lng, g.last_accuracy, g.last_speed, g.last_battery, g.last_seen_at,
+                   g.last_ping_at, g.gps_state, g.gps_state_at,
                    a.id AS assignment_id, a.site_name, a.site_lat, a.site_lng, a.geofence_radius_m,
                    a.shift_start, a.shift_end, c.id AS client_id, c.name AS client_name, c.client_code,
                    (SELECT COUNT(*) FROM alerts s WHERE s.guard_id = g.id AND s.type = 'sos' AND s.status <> 'resolved') AS open_sos,
-                   (SELECT COUNT(*) FROM alerts f WHERE f.guard_id = g.id AND f.type = 'geofence_exit' AND f.status <> 'resolved') AS open_geofence
+                   (SELECT COUNT(*) FROM alerts f WHERE f.guard_id = g.id AND f.type = 'geofence_exit' AND f.status <> 'resolved') AS open_geofence,
+                   (SELECT GROUP_CONCAT(DISTINCT x.type) FROM alerts x WHERE x.guard_id = g.id AND x.status <> 'resolved') AS open_types,
+                   (SELECT t.check_in_at FROM attendance t WHERE t.guard_id = g.id AND t.status = 'open' ORDER BY t.id DESC LIMIT 1) AS duty_since
               FROM guards g
               LEFT JOIN assignments a ON a.guard_id = g.id AND a.status = 'active'
               LEFT JOIN clients c ON c.id = a.client_id
@@ -220,9 +226,9 @@ function guards_live_sql(string $where = '1=1'): string
  * Start a duty shift for a guard. Returns the attendance row id.
  * Throws RuntimeException with a user-facing message.
  */
-function start_shift(array $guard, ?float $lat, ?float $lng, ?float $accuracy): array
+function start_shift(array $guard, ?float $lat, ?float $lng, ?float $accuracy, ?string $selfie = null): array
 {
-    return db_tx(function () use ($guard, $lat, $lng, $accuracy) {
+    return db_tx(function () use ($guard, $lat, $lng, $accuracy, $selfie) {
         $gid = (int)$guard['id'];
         // Lock the guard row so a double-tap can't open two shifts.
         q('SELECT id FROM guards WHERE id = ? FOR UPDATE', [$gid]);
@@ -240,12 +246,16 @@ function start_shift(array $guard, ?float $lat, ?float $lng, ?float $accuracy): 
                     $dist >= 1000 ? round($dist / 1000, 1) . ' km' : $dist . ' m', $asg['site_name'], $max));
             }
         }
-        q('INSERT INTO attendance (guard_id, assignment_id, client_id, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_distance_m, status)
-           VALUES (?,?,?,?,?,?,?,?, \'open\')',
-          [$gid, $asg['id'] ?? null, $asg['client_id'] ?? null, now(), $lat, $lng, $accuracy, $dist]);
+        $win = shift_window_for_checkin($asg, time());
+        q('INSERT INTO attendance (guard_id, assignment_id, client_id, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_distance_m, status,
+                                   check_in_selfie, shift_start_at, shift_end_at, late_minutes)
+           VALUES (?,?,?,?,?,?,?,?, \'open\', ?,?,?,?)',
+          [$gid, $asg['id'] ?? null, $asg['client_id'] ?? null, now(), $lat, $lng, $accuracy, $dist,
+           $selfie, date('Y-m-d H:i:s', $win['start']), date('Y-m-d H:i:s', $win['end']), $win['late_minutes']]);
         $attId = (int)db()->lastInsertId();
         q('UPDATE guards SET is_on_duty = 1 WHERE id = ?', [$gid]);
-        return ['attendance_id' => $attId, 'distance_m' => $dist, 'assignment' => $asg];
+        resolve_guard_alerts($gid, ['late'], 'Guard started duty' . ($win['late_minutes'] ? ' (' . $win['late_minutes'] . ' min late)' : ''));
+        return ['attendance_id' => $attId, 'distance_m' => $dist, 'assignment' => $asg, 'late_minutes' => $win['late_minutes']];
     });
 }
 
@@ -268,13 +278,17 @@ function end_shift(int $guardId, ?float $lat, ?float $lng, ?int $adminId = null,
         }
         $out = now();
         $mins = max(0, (int)round((strtotime($out) - strtotime($shift['check_in_at'])) / 60));
+        [$ot, $otOk] = compute_overtime($shift, strtotime($out));
         q('UPDATE attendance SET check_out_at = ?, check_out_lat = ?, check_out_lng = ?, check_out_distance_m = ?,
-                  duration_minutes = ?, status = \'closed\', closed_by_admin = ?, notes = COALESCE(?, notes) WHERE id = ?',
-          [$out, $lat, $lng, $dist, $mins, $adminId, $note, $shift['id']]);
+                  duration_minutes = ?, overtime_minutes = ?, approved_ot_minutes = ?,
+                  status = \'closed\', closed_by_admin = ?, notes = COALESCE(?, notes) WHERE id = ?',
+          [$out, $lat, $lng, $dist, $mins, $ot, $otOk, $adminId, $note, $shift['id']]);
         q('UPDATE guards SET is_on_duty = 0 WHERE id = ?', [$guardId]);
-        // Leaving duty clears any open "left site" alert for that shift.
-        q('UPDATE alerts SET status = \'resolved\', resolved_at = ?, resolution_note = \'Shift ended\'
-            WHERE guard_id = ? AND type = \'geofence_exit\' AND status <> \'resolved\'', [$out, $guardId]);
-        return ['attendance_id' => (int)$shift['id'], 'duration_minutes' => $mins];
+        // Leaving duty clears the shift's "left site" and tracking-health alerts.
+        resolve_guard_alerts($guardId, ['geofence_exit', 'offline', 'gps_off', 'no_movement'], 'Shift ended');
+        // A request still waiting for approval no longer applies.
+        q("UPDATE duty_extensions SET status = 'cancelled', admin_note = COALESCE(admin_note, 'Shift ended before a decision')
+            WHERE attendance_id = ? AND status = 'pending'", [$shift['id']]);
+        return ['attendance_id' => (int)$shift['id'], 'duration_minutes' => $mins, 'overtime_minutes' => $ot, 'approved_ot_minutes' => $otOk];
     });
 }

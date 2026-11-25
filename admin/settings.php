@@ -7,6 +7,7 @@ $tab = get_str('tab', 20) ?: 'company';
 $companyKeys = ['company_name', 'company_address', 'company_phone', 'company_email', 'company_gstin',
                 'currency_symbol', 'tax_label', 'tax_percent', 'invoice_prefix', 'invoice_due_days', 'invoice_terms'];
 $trackingKeys = ['tracking_interval_sec', 'offline_after_min', 'location_retention_days', 'checkin_max_distance_m',
+                 'require_selfie', 'selfie_retention_days', 'late_grace_min', 'default_shift_hours', 'ot_min_minutes', 'no_movement_min',
                  'map_default_lat', 'map_default_lng', 'map_default_zoom'];
 
 if (is_post()) {
@@ -20,6 +21,8 @@ if (is_post()) {
             'tracking_interval_sec' => [10, 300], 'offline_after_min' => [1, 60], 'location_retention_days' => [7, 730],
             'checkin_max_distance_m' => [0, 50000], 'map_default_zoom' => [2, 18], 'tax_percent' => [0, 100], 'invoice_due_days' => [0, 365],
             'map_default_lat' => [-90, 90], 'map_default_lng' => [-180, 180],
+            'require_selfie' => [0, 1], 'selfie_retention_days' => [7, 730], 'late_grace_min' => [0, 240],
+            'default_shift_hours' => [1, 24], 'ot_min_minutes' => [0, 120], 'no_movement_min' => [0, 600],
         ];
         foreach ($keys as $k) {
             $val = trim((string)($_POST[$k] ?? ''));
@@ -150,6 +153,21 @@ require APP_ROOT . '/includes/layout/header.php';
                 <div class="form-text">Currently <?= number_format($locRows) ?> location points stored.</div></div>
             <div class="col-md-4"><label class="form-label">Max check-in distance from site (m)</label><input type="number" min="0" name="checkin_max_distance_m" class="form-control" value="<?= $s('checkin_max_distance_m') ?>">
                 <div class="form-text">Guards farther than this (or the site's geofence, whichever is larger) cannot check in. 0 = no limit.</div></div>
+            <div class="col-12"><h3 class="fs-6 fw-bold mb-0 mt-2">Duty, late &amp; overtime</h3></div>
+            <div class="col-md-4"><div class="form-check form-switch mt-md-4">
+                <input type="hidden" name="require_selfie" value="0">
+                <input class="form-check-input" type="checkbox" role="switch" id="reqSelfie" name="require_selfie" value="1" <?= setting('require_selfie', '1') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-semibold" for="reqSelfie">Selfie required to start duty</label></div></div>
+            <div class="col-md-4"><label class="form-label">Keep duty selfies (days)</label><input type="number" min="7" max="730" name="selfie_retention_days" class="form-control" value="<?= $s('selfie_retention_days') ?>"></div>
+            <div class="col-md-4"><label class="form-label">Late after shift start + (minutes)</label><input type="number" min="0" max="240" name="late_grace_min" class="form-control" value="<?= $s('late_grace_min') ?>">
+                <div class="form-text">Grace time. After this the guard is marked Late and you get an alert if they haven't started duty.</div></div>
+            <div class="col-md-4"><label class="form-label">Default shift length (hours)</label><input type="number" min="1" max="24" step="0.5" name="default_shift_hours" class="form-control" value="<?= $s('default_shift_hours') ?>">
+                <div class="form-text">Used for overtime when a deployment has no shift timings.</div></div>
+            <div class="col-md-4"><label class="form-label">Count overtime from (minutes)</label><input type="number" min="0" max="120" name="ot_min_minutes" class="form-control" value="<?= $s('ot_min_minutes') ?>">
+                <div class="form-text">Extra time shorter than this is ignored.</div></div>
+            <div class="col-md-4"><label class="form-label">"Not moving" alert after (minutes)</label><input type="number" min="0" max="600" name="no_movement_min" class="form-control" value="<?= $s('no_movement_min') ?>">
+                <div class="form-text">Alert when an on-duty guard stays within <?= STILL_RADIUS_M ?> m this long. 0 = off.</div></div>
+            <div class="col-12"><h3 class="fs-6 fw-bold mb-0 mt-2">Map</h3></div>
             <div class="col-md-3"><label class="form-label">Map centre latitude</label><input name="map_default_lat" class="form-control" value="<?= $s('map_default_lat') ?>"></div>
             <div class="col-md-3"><label class="form-label">Map centre longitude</label><input name="map_default_lng" class="form-control" value="<?= $s('map_default_lng') ?>"></div>
             <div class="col-md-2"><label class="form-label">Zoom</label><input type="number" min="2" max="18" name="map_default_zoom" class="form-control" value="<?= $s('map_default_zoom') ?>"></div>

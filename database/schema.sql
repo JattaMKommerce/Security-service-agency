@@ -47,6 +47,9 @@ CREATE TABLE IF NOT EXISTS guards (
     last_speed              FLOAT NULL,
     last_battery            TINYINT NULL,
     last_seen_at            DATETIME NULL,
+    last_ping_at            DATETIME NULL,
+    gps_state               ENUM('ok','off','denied','unknown') NOT NULL DEFAULT 'unknown',
+    gps_state_at            DATETIME NULL,
     remember_hash           CHAR(64) NULL,
     remember_expires        DATETIME NULL,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -128,6 +131,12 @@ CREATE TABLE IF NOT EXISTS attendance (
     status                  ENUM('open','closed','auto_closed') NOT NULL DEFAULT 'open',
     closed_by_admin         INT UNSIGNED NULL,
     notes                   VARCHAR(255) NULL,
+    check_in_selfie         VARCHAR(80) NULL,
+    shift_start_at          DATETIME NULL,
+    shift_end_at            DATETIME NULL,
+    late_minutes            INT UNSIGNED NULL,
+    overtime_minutes        INT UNSIGNED NULL,
+    approved_ot_minutes     INT UNSIGNED NULL,
     KEY idx_att_guard (guard_id, check_in_at),
     KEY idx_att_asg (assignment_id, check_in_at),
     KEY idx_att_client (client_id, check_in_at),
@@ -155,7 +164,7 @@ CREATE TABLE IF NOT EXISTS guard_locations (
 
 CREATE TABLE IF NOT EXISTS alerts (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    type                ENUM('sos','geofence_exit') NOT NULL,
+    type                ENUM('sos','geofence_exit','late','no_movement','gps_off','offline') NOT NULL,
     guard_id            INT UNSIGNED NOT NULL,
     assignment_id       INT UNSIGNED NULL,
     client_id           INT UNSIGNED NULL,
@@ -257,6 +266,50 @@ CREATE TABLE IF NOT EXISTS inquiries (
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS duty_extensions (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    guard_id            INT UNSIGNED NOT NULL,
+    attendance_id       INT UNSIGNED NOT NULL,
+    assignment_id       INT UNSIGNED NULL,
+    requested_minutes   INT UNSIGNED NOT NULL,
+    approved_minutes    INT UNSIGNED NULL,
+    reason              VARCHAR(255) NOT NULL,
+    status              ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    requested_at        DATETIME NOT NULL,
+    decided_by          INT UNSIGNED NULL,
+    decided_at          DATETIME NULL,
+    admin_note          VARCHAR(255) NULL,
+    KEY idx_ext_status (status, requested_at),
+    KEY idx_ext_att (attendance_id),
+    KEY idx_ext_guard (guard_id, requested_at),
+    CONSTRAINT fk_ext_guard FOREIGN KEY (guard_id) REFERENCES guards(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ext_att FOREIGN KEY (attendance_id) REFERENCES attendance(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shift_handovers (
+    id                      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id               INT UNSIGNED NULL,
+    site_name               VARCHAR(150) NULL,
+    outgoing_guard_id       INT UNSIGNED NOT NULL,
+    outgoing_attendance_id  INT UNSIGNED NULL,
+    incoming_guard_id       INT UNSIGNED NOT NULL,
+    incoming_attendance_id  INT UNSIGNED NULL,
+    items                   VARCHAR(500) NULL,
+    notes                   VARCHAR(1000) NULL,
+    lat                     DECIMAL(10,7) NULL,
+    lng                     DECIMAL(10,7) NULL,
+    status                  ENUM('pending','accepted','disputed') NOT NULL DEFAULT 'pending',
+    created_at              DATETIME NOT NULL,
+    responded_at            DATETIME NULL,
+    incoming_note           VARCHAR(500) NULL,
+    KEY idx_ho_in (incoming_guard_id, status),
+    KEY idx_ho_out (outgoing_guard_id, created_at),
+    KEY idx_ho_time (created_at),
+    CONSTRAINT fk_ho_out FOREIGN KEY (outgoing_guard_id) REFERENCES guards(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ho_in FOREIGN KEY (incoming_guard_id) REFERENCES guards(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ho_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
@@ -278,4 +331,11 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
     ('map_default_lng',         '78.9629'),
     ('map_default_zoom',        '5'),
     ('checkin_max_distance_m',  '500'),
-    ('last_maintenance_at',     '0');
+    ('last_maintenance_at',     '0'),
+    ('require_selfie',          '1'),
+    ('selfie_retention_days',   '90'),
+    ('late_grace_min',          '15'),
+    ('default_shift_hours',     '8'),
+    ('ot_min_minutes',          '15'),
+    ('no_movement_min',         '60'),
+    ('schema_version',          '2');

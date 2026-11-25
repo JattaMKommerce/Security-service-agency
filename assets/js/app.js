@@ -121,8 +121,13 @@
     const KEY = 'sa_last_alert_id';
     const typeMeta = {
         sos: { icon: 'bi-exclamation-octagon-fill', cls: 'tint-red', title: 'SOS EMERGENCY' },
-        geofence_exit: { icon: 'bi-sign-turn-right-fill', cls: 'tint-amber', title: 'Left site' }
+        geofence_exit: { icon: 'bi-sign-turn-right-fill', cls: 'tint-amber', title: 'Left site' },
+        late: { icon: 'bi-alarm-fill', cls: 'tint-amber', title: 'Late / not reported' },
+        no_movement: { icon: 'bi-pause-circle-fill', cls: 'tint-amber', title: 'Not moving' },
+        gps_off: { icon: 'bi-geo-alt', cls: 'tint-red', title: 'GPS turned off' },
+        offline: { icon: 'bi-wifi-off', cls: 'tint-red', title: 'No internet / signal' }
     };
+    const EXT_KEY = 'sa_last_ext_id';
 
     function renderAlertMenu(list) {
         const box = document.getElementById('alertMenuList');
@@ -162,8 +167,20 @@
         try {
             let last = memLast;
             try { const s = sessionStorage.getItem(KEY); if (s !== null) last = parseInt(s, 10) || 0; } catch (e) { }
-            const data = await APP.api('api/admin/alerts_poll.php' + (last !== null ? '?since_id=' + last : ''));
+            let extLast = null;
+            try { const s = sessionStorage.getItem(EXT_KEY); if (s !== null) extLast = parseInt(s, 10) || 0; } catch (e) { }
+            const qs = [];
+            if (last !== null) qs.push('since_id=' + last);
+            if (extLast !== null) qs.push('ext_since=' + extLast);
+            const data = await APP.api('api/admin/alerts_poll.php' + (qs.length ? '?' + qs.join('&') : ''));
             setCount(data.open_count);
+            document.querySelectorAll('.js-ext-count').forEach((el) => { el.textContent = data.ext_pending; el.classList.toggle('d-none', !data.ext_pending); });
+            try { sessionStorage.setItem(EXT_KEY, String(Math.max(extLast || 0, data.ext_max_id || 0))); } catch (e) { }
+            if (extLast !== null && data.ext_new && data.ext_new.length) {
+                data.ext_new.forEach((x) => APP.toast('<strong><i class="bi bi-hourglass-split me-1"></i>Extra hours request: ' + APP.esc(x.guard_name) + '</strong><br>+' +
+                    APP.esc(x.minutes) + ' — ' + APP.esc(x.reason) + '<br><a class="text-white fw-semibold" href="' + APP.url('admin/duty.php?tab=requests') + '">Approve / reject →</a>', 'primary', 15000));
+                APP.beep(false);
+            }
             renderAlertMenu(data.open);
 
             const newLast = Math.max(last || 0, data.max_id || 0);

@@ -10,6 +10,7 @@ $useMap = $useMap ?? false;
 $useCharts = $useCharts ?? false;
 $openAlerts = (int)q_val("SELECT COUNT(*) FROM alerts WHERE status <> 'resolved'");
 $newInquiries = (int)q_val("SELECT COUNT(*) FROM inquiries WHERE status = 'new'");
+$pendingExt = (int)q_val("SELECT COUNT(*) FROM duty_extensions WHERE status = 'pending'");
 
 $nav = [
     ['dashboard',   'admin/index.php',       'bi-speedometer2',      'Dashboard'],
@@ -19,6 +20,7 @@ $nav = [
     ['assignments', 'admin/assignments.php', 'bi-briefcase',         'Hiring / Deployments'],
     ['inquiries',   'admin/inquiries.php',   'bi-chat-left-dots',    'Web Inquiries'],
     ['attendance',  'admin/attendance.php',  'bi-calendar-check',    'Attendance'],
+    ['duty',        'admin/duty.php',        'bi-hourglass-split',   'Overtime & Handover'],
     ['alerts',      'admin/alerts.php',      'bi-exclamation-octagon', 'Alerts'],
     ['invoices',    'admin/invoices.php',    'bi-receipt',           'Invoices'],
     ['settings',    'admin/settings.php',    'bi-gear',              'Settings'],
@@ -56,6 +58,8 @@ $nav = [
                     <i class="bi <?= $icon ?>"></i><span><?= e($text) ?></span>
                     <?php if ($key === 'alerts'): ?>
                         <span class="badge rounded-pill bg-danger ms-auto js-alert-count<?= $openAlerts ? '' : ' d-none' ?>"><?= $openAlerts ?></span>
+                    <?php elseif ($key === 'duty'): ?>
+                        <span class="badge rounded-pill bg-warning text-dark ms-auto js-ext-count<?= $pendingExt ? '' : ' d-none' ?>"><?= $pendingExt ?></span>
                     <?php elseif ($key === 'inquiries' && $newInquiries > 0): ?>
                         <span class="badge rounded-pill bg-danger ms-auto"><?= $newInquiries ?></span>
                     <?php endif; ?>
